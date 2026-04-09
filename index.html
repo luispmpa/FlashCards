@@ -301,6 +301,150 @@ body {
 .stat-card-num.c-orange { color: var(--orange); }
 .stat-card-num.c-green { color: var(--green); }
 
+.stat-card-clickable {
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  position: relative;
+}
+.stat-card-clickable:hover {
+  border-color: var(--border2);
+  background: var(--bg3);
+}
+.stat-card-hint {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--mono);
+  margin-top: .25rem;
+}
+
+/* ── AGENDA ──────────────────────── */
+.agenda-group { margin-bottom: 1.75rem; }
+.agenda-day-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text3);
+  margin-bottom: .5rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.agenda-day-badge {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: var(--bg4);
+  color: var(--text3);
+  border: 1px solid var(--border);
+}
+.agenda-day-badge.hoje { background: rgba(212,168,67,.15); color: var(--accent); border-color: var(--accent); }
+.agenda-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .5rem .75rem;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  margin-bottom: .375rem;
+  font-size: 13px;
+}
+.agenda-row:hover { background: var(--bg3); }
+.agenda-state { flex-shrink: 0; }
+.agenda-text { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agenda-time { font-family: var(--mono); font-size: 11px; color: var(--text3); flex-shrink: 0; }
+
+/* ── RENDIMENTO ──────────────────── */
+.rend-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .75rem;
+  margin-bottom: 1.75rem;
+}
+.rend-kpi {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 1.25rem;
+}
+.rend-kpi-label { font-size: 10px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-bottom: .5rem; }
+.rend-kpi-val { font-family: var(--mono); font-size: 28px; font-weight: 500; }
+.rend-kpi-sub { font-size: 11px; color: var(--text3); margin-top: .25rem; }
+
+.rend-section-title {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  margin-bottom: .75rem;
+  margin-top: .25rem;
+}
+
+.rend-bar-wrap { margin-bottom: 1.75rem; }
+.rend-bar-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: .5rem;
+  font-size: 12px;
+}
+.rend-bar-label { width: 70px; color: var(--text2); flex-shrink: 0; font-family: var(--mono); font-size: 11px; }
+.rend-bar-track { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+.rend-bar-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+.rend-bar-val { width: 40px; text-align: right; color: var(--text3); font-family: var(--mono); font-size: 11px; flex-shrink: 0; }
+
+.rend-heat-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+.heat-grid {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-top: .75rem;
+}
+.heat-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.heat-cell.h1 { background: rgba(212,168,67,.2); border-color: rgba(212,168,67,.3); }
+.heat-cell.h2 { background: rgba(212,168,67,.45); border-color: rgba(212,168,67,.5); }
+.heat-cell.h3 { background: rgba(212,168,67,.7); border-color: var(--accent2); }
+.heat-cell.h4 { background: var(--accent); border-color: var(--accent2); }
+
+.resp-dist {
+  display: flex;
+  gap: .5rem;
+  align-items: stretch;
+  height: 80px;
+  margin-top: .75rem;
+}
+.resp-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.resp-bar-col .bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: height .4s ease;
+}
+.resp-bar-col .bar-label { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.resp-bar-col .bar-val { font-family: var(--mono); font-size: 11px; }
+
+
 /* ── BREADCRUMB ─────────────────────────────────── */
 .breadcrumb {
   display: flex;
@@ -693,6 +837,12 @@ body {
       <div class="nav-item" data-page="study" onclick="iniciarEstudo()">
         <span class="nav-icon">▶</span> Estudar agora
       </div>
+      <div class="nav-item" data-page="agenda" onclick="navTo('agenda',this);carregarAgenda()">
+        <span class="nav-icon">◷</span> Agenda
+      </div>
+      <div class="nav-item" data-page="rendimento" onclick="navTo('rendimento',this);carregarRendimento()">
+        <span class="nav-icon">◎</span> Rendimento
+      </div>
       <div class="sidebar-divider"></div>
       <div class="nav-section-label">Projetos</div>
       <div class="proj-tree" id="sidebar-projetos">
@@ -717,17 +867,20 @@ body {
           <button class="btn btn-accent" onclick="iniciarEstudo()">▶ Estudar agora</button>
         </div>
         <div class="stat-cards">
-          <div class="stat-card">
-            <div class="stat-card-label">Para estudar hoje</div>
+          <div class="stat-card stat-card-clickable" onclick="iniciarEstudoFiltrado('hoje')" title="Estudar os cards disponíveis agora">
+            <div class="stat-card-label">Para estudar hoje ▶</div>
             <div class="stat-card-num c-blue" id="dash-hoje">—</div>
+            <div class="stat-card-hint">clique para estudar</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Em aprendizado</div>
+          <div class="stat-card stat-card-clickable" onclick="iniciarEstudoFiltrado('learning')" title="Ver cards em aprendizado">
+            <div class="stat-card-label">Em aprendizado ▶</div>
             <div class="stat-card-num c-orange" id="dash-learning">—</div>
+            <div class="stat-card-hint">clique para ver agenda</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Em revisão</div>
+          <div class="stat-card stat-card-clickable" onclick="iniciarEstudoFiltrado('review')" title="Ver cards em revisão com data futura">
+            <div class="stat-card-label">Em revisão ▶</div>
             <div class="stat-card-num c-green" id="dash-review">—</div>
+            <div class="stat-card-hint">clique para ver agenda</div>
           </div>
         </div>
         <div class="page-header" style="margin-top:1rem;">
@@ -792,6 +945,28 @@ body {
           </thead>
           <tbody id="cards-tbody"></tbody>
         </table>
+      </div>
+
+      <!-- AGENDA -->
+      <div class="page" id="page-agenda">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Agenda</div>
+            <div class="page-subtitle">próximas revisões agendadas</div>
+          </div>
+        </div>
+        <div id="agenda-container"></div>
+      </div>
+
+      <!-- RENDIMENTO -->
+      <div class="page" id="page-rendimento">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Rendimento</div>
+            <div class="page-subtitle">histórico e indicadores de estudo</div>
+          </div>
+        </div>
+        <div id="rendimento-container"></div>
       </div>
 
     </div><!-- /main -->
@@ -1583,6 +1758,310 @@ function toast(msg, dur = 2500) {
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), dur);
 }
+
+// ================================================================
+// ESTUDO FILTRADO (stat cards clicáveis)
+// ================================================================
+async function iniciarEstudoFiltrado(filtro) {
+  const hoje = new Date();
+  let query = sb.from('cards').select('*');
+
+  if (filtro === 'hoje') {
+    // Só os disponíveis agora
+    query = query.lte('due_date', hoje.toISOString()).order('due_date').limit(50);
+  } else if (filtro === 'learning') {
+    // Aprendendo — vai para agenda mostrando só esses
+    navTo('agenda', document.querySelector('[data-page=agenda]'));
+    await carregarAgenda('learning');
+    return;
+  } else if (filtro === 'review') {
+    navTo('agenda', document.querySelector('[data-page=agenda]'));
+    await carregarAgenda('review');
+    return;
+  }
+
+  const { data } = await query;
+  if (!data?.length) { toast('Nenhum card disponível para estudar agora 🎉'); return; }
+  estudoQueue = data;
+  estudoIndex = 0;
+  estudoTotal = data.length;
+  document.getElementById('study-active').style.display = 'flex';
+  document.getElementById('study-done').style.display   = 'none';
+  document.getElementById('study-screen').style.display = 'flex';
+  mostrarCardAtual();
+}
+
+// ================================================================
+// AGENDA
+// ================================================================
+async function carregarAgenda(filtroEstado = null) {
+  const el = document.getElementById('agenda-container');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div> Carregando...</div>';
+
+  let query = sb.from('cards')
+    .select('id, frente, state, due_date, interval_days, ease_factor')
+    .order('due_date', { ascending: true })
+    .limit(200);
+
+  if (filtroEstado) query = query.eq('state', filtroEstado);
+
+  const { data, error } = await query;
+  if (error || !data?.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">◷</div><div class="empty-title">Nenhum card agendado</div></div>';
+    return;
+  }
+
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+
+  // Agrupa por dia
+  const grupos = {};
+  data.forEach(c => {
+    const due = new Date(c.due_date);
+    due.setHours(0,0,0,0);
+    const key = due.toISOString().split('T')[0];
+    if (!grupos[key]) grupos[key] = [];
+    grupos[key].push(c);
+  });
+
+  const sortedKeys = Object.keys(grupos).sort();
+  let html = '';
+
+  if (filtroEstado) {
+    html += `<div style="margin-bottom:1rem;font-size:12px;color:var(--text3);font-family:var(--mono);">
+      Filtrando: <span style="color:var(--accent)">${filtroEstado === 'learning' ? 'Em aprendizado' : 'Em revisão'}</span>
+      <button class="btn btn-sm" style="margin-left:.75rem;" onclick="carregarAgenda()">ver todos</button>
+    </div>`;
+  }
+
+  sortedKeys.forEach(key => {
+    const cards = grupos[key];
+    const dia = new Date(key + 'T00:00:00');
+    const diffDias = Math.round((dia - hoje) / 86400000);
+    let label = '';
+    if (diffDias < 0)       label = 'Atrasados';
+    else if (diffDias === 0) label = 'Hoje';
+    else if (diffDias === 1) label = 'Amanhã';
+    else                    label = `Em ${diffDias} dias`;
+
+    const isHoje = diffDias <= 0;
+    const fmtDia = dia.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'short' });
+
+    html += `<div class="agenda-group">
+      <div class="agenda-day-label">
+        ${fmtDia}
+        <span class="agenda-day-badge ${isHoje ? 'hoje' : ''}">${label} · ${cards.length} card${cards.length>1?'s':''}</span>
+      </div>`;
+
+    cards.forEach(c => {
+      const stateLabel = { new: 'Novo', learning: 'Aprendendo', review: 'Revisão' }[c.state] || c.state;
+      const stateClass = { new: 'state-new', learning: 'state-learning', review: 'state-review' }[c.state] || '';
+      const ef = parseFloat(c.ease_factor || 2.5).toFixed(1);
+      const ivl = c.interval_days > 0 ? `ivl: ${Math.ceil(c.interval_days)}d` : '';
+      const hora = new Date(c.due_date).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+      const frenteShort = (c.frente || '').substring(0, 70) + ((c.frente || '').length > 70 ? '…' : '');
+
+      html += `<div class="agenda-row">
+        <span class="agenda-state"><span class="state-badge ${stateClass}">${stateLabel}</span></span>
+        <span class="agenda-text">${esc(frenteShort)}</span>
+        <span class="agenda-time" title="EF: ${ef}${ivl ? ' · ' + ivl : ''}">${diffDias <= 0 ? hora : ''} EF ${ef}${ivl ? ' · '+ivl : ''}</span>
+      </div>`;
+    });
+
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
+}
+
+// ================================================================
+// RENDIMENTO
+// ================================================================
+async function carregarRendimento() {
+  const el = document.getElementById('rendimento-container');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div> Carregando...</div>';
+
+  // Busca histórico de revisões (últimos 90 dias)
+  const desde = new Date();
+  desde.setDate(desde.getDate() - 90);
+
+  const [{ data: revs }, { data: cards }] = await Promise.all([
+    sb.from('revisoes')
+      .select('resposta, revisado_em, ease_factor_depois')
+      .gte('revisado_em', desde.toISOString())
+      .order('revisado_em', { ascending: true }),
+    sb.from('cards').select('state, ease_factor, lapses, total_reviews'),
+  ]);
+
+  const r = revs || [];
+  const c = cards || [];
+
+  // KPIs
+  const total = r.length;
+  const acertos = r.filter(x => ['bom','facil'].includes(x.resposta)).length;
+  const erros   = r.filter(x => x.resposta === 'errei').length;
+  const taxa    = total > 0 ? Math.round((acertos / total) * 100) : 0;
+  const efMedio = c.length > 0 ? (c.reduce((s,x) => s + parseFloat(x.ease_factor||2.5), 0) / c.length).toFixed(2) : '—';
+  const totalLapses = c.reduce((s,x) => s + (x.lapses||0), 0);
+  const totalCards  = c.length;
+
+  // Sequência de dias (streak)
+  const diasComEstudo = new Set(r.map(x => x.revisado_em.split('T')[0]));
+  let streak = 0;
+  const d = new Date(); d.setHours(0,0,0,0);
+  while (diasComEstudo.has(d.toISOString().split('T')[0])) {
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+
+  // Distribuição por resposta
+  const dist = { errei: 0, dificil: 0, bom: 0, facil: 0 };
+  r.forEach(x => { if (dist[x.resposta] !== undefined) dist[x.resposta]++; });
+
+  // Heatmap: últimos 84 dias (12 semanas)
+  const contDia = {};
+  r.forEach(x => {
+    const dia = x.revisado_em.split('T')[0];
+    contDia[dia] = (contDia[dia]||0) + 1;
+  });
+  const maxDia = Math.max(1, ...Object.values(contDia));
+
+  const heatCells = [];
+  for (let i = 83; i >= 0; i--) {
+    const hd = new Date(); hd.setDate(hd.getDate() - i); hd.setHours(0,0,0,0);
+    const k = hd.toISOString().split('T')[0];
+    const cnt = contDia[k] || 0;
+    let cls = '';
+    if (cnt > 0) {
+      const pct = cnt / maxDia;
+      cls = pct < .25 ? 'h1' : pct < .5 ? 'h2' : pct < .75 ? 'h3' : 'h4';
+    }
+    heatCells.push(`<div class="heat-cell ${cls}" title="${k}: ${cnt} revisões"></div>`);
+  }
+
+  // Barras de distribuição
+  const maxDist = Math.max(1, ...Object.values(dist));
+  function barH(v) { return Math.round((v/maxDist)*60); }
+
+  // EF distribution dos cards
+  const efBuckets = { '1.3–1.7': 0, '1.7–2.1': 0, '2.1–2.5': 0, '2.5–2.9': 0, '2.9+': 0 };
+  c.forEach(x => {
+    const ef = parseFloat(x.ease_factor||2.5);
+    if (ef < 1.7) efBuckets['1.3–1.7']++;
+    else if (ef < 2.1) efBuckets['1.7–2.1']++;
+    else if (ef < 2.5) efBuckets['2.1–2.5']++;
+    else if (ef < 2.9) efBuckets['2.5–2.9']++;
+    else efBuckets['2.9+']++;
+  });
+  const maxEF = Math.max(1, ...Object.values(efBuckets));
+
+  el.innerHTML = `
+    <!-- KPIs -->
+    <div class="rend-grid">
+      <div class="rend-kpi">
+        <div class="rend-kpi-label">Taxa de acerto</div>
+        <div class="rend-kpi-val" style="color:${taxa >= 70 ? 'var(--green)' : taxa >= 50 ? 'var(--accent)' : 'var(--red)'}">${taxa}%</div>
+        <div class="rend-kpi-sub">${acertos} acertos / ${total} revisões</div>
+      </div>
+      <div class="rend-kpi">
+        <div class="rend-kpi-label">Streak atual</div>
+        <div class="rend-kpi-val" style="color:var(--accent)">${streak}</div>
+        <div class="rend-kpi-sub">dias consecutivos</div>
+      </div>
+      <div class="rend-kpi">
+        <div class="rend-kpi-label">EF médio</div>
+        <div class="rend-kpi-val" style="color:var(--blue)">${efMedio}</div>
+        <div class="rend-kpi-sub">ease factor médio</div>
+      </div>
+      <div class="rend-kpi">
+        <div class="rend-kpi-label">Total de lapsos</div>
+        <div class="rend-kpi-val" style="color:var(--red)">${totalLapses}</div>
+        <div class="rend-kpi-sub">em ${totalCards} cards</div>
+      </div>
+    </div>
+
+    <!-- Heatmap -->
+    <div class="rend-heat-wrap">
+      <div class="rend-section-title">Atividade — últimas 12 semanas</div>
+      <div class="heat-grid">${heatCells.join('')}</div>
+      <div style="margin-top:.75rem;display:flex;align-items:center;gap:.5rem;font-size:11px;color:var(--text3);font-family:var(--mono);">
+        Menos
+        <div class="heat-cell"></div>
+        <div class="heat-cell h1"></div>
+        <div class="heat-cell h2"></div>
+        <div class="heat-cell h3"></div>
+        <div class="heat-cell h4"></div>
+        Mais
+      </div>
+    </div>
+
+    <!-- Distribuição de respostas -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.75rem;">
+      <div class="rend-heat-wrap" style="margin-bottom:0;">
+        <div class="rend-section-title">Distribuição de respostas</div>
+        <div class="resp-dist">
+          <div class="resp-bar-col">
+            <div class="bar-val" style="color:var(--red)">${dist.errei}</div>
+            <div class="bar" style="height:${barH(dist.errei)}px;background:var(--red);opacity:.7"></div>
+            <div class="bar-label">Errei</div>
+          </div>
+          <div class="resp-bar-col">
+            <div class="bar-val" style="color:var(--orange)">${dist.dificil}</div>
+            <div class="bar" style="height:${barH(dist.dificil)}px;background:var(--orange);opacity:.7"></div>
+            <div class="bar-label">Difícil</div>
+          </div>
+          <div class="resp-bar-col">
+            <div class="bar-val" style="color:var(--blue)">${dist.bom}</div>
+            <div class="bar" style="height:${barH(dist.bom)}px;background:var(--blue);opacity:.7"></div>
+            <div class="bar-label">Bom</div>
+          </div>
+          <div class="resp-bar-col">
+            <div class="bar-val" style="color:var(--green)">${dist.facil}</div>
+            <div class="bar" style="height:${barH(dist.facil)}px;background:var(--green);opacity:.7"></div>
+            <div class="bar-label">Fácil</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rend-heat-wrap" style="margin-bottom:0;">
+        <div class="rend-section-title">Distribuição de Ease Factor</div>
+        <div class="rend-bar-wrap" style="margin-bottom:0;">
+          ${Object.entries(efBuckets).map(([k,v]) => `
+          <div class="rend-bar-row">
+            <div class="rend-bar-label">${k}</div>
+            <div class="rend-bar-track">
+              <div class="rend-bar-fill" style="width:${Math.round((v/maxEF)*100)}%;background:var(--accent);opacity:.8"></div>
+            </div>
+            <div class="rend-bar-val">${v}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Estado dos cards -->
+    <div class="rend-heat-wrap">
+      <div class="rend-section-title">Estado atual dos cards</div>
+      <div class="rend-bar-wrap" style="margin-bottom:0;">
+        <div class="rend-bar-row">
+          <div class="rend-bar-label">Novos</div>
+          <div class="rend-bar-track"><div class="rend-bar-fill" style="width:${Math.round((c.filter(x=>x.state==='new').length/Math.max(1,totalCards))*100)}%;background:var(--blue)"></div></div>
+          <div class="rend-bar-val">${c.filter(x=>x.state==='new').length}</div>
+        </div>
+        <div class="rend-bar-row">
+          <div class="rend-bar-label">Aprendendo</div>
+          <div class="rend-bar-track"><div class="rend-bar-fill" style="width:${Math.round((c.filter(x=>x.state==='learning').length/Math.max(1,totalCards))*100)}%;background:var(--orange)"></div></div>
+          <div class="rend-bar-val">${c.filter(x=>x.state==='learning').length}</div>
+        </div>
+        <div class="rend-bar-row">
+          <div class="rend-bar-label">Revisão</div>
+          <div class="rend-bar-track"><div class="rend-bar-fill" style="width:${Math.round((c.filter(x=>x.state==='review').length/Math.max(1,totalCards))*100)}%;background:var(--green)"></div></div>
+          <div class="rend-bar-val">${c.filter(x=>x.state==='review').length}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 </script>
 </body>
 </html>
