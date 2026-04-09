@@ -419,6 +419,8 @@ body {
 .heat-cell.h2 { background: rgba(212,168,67,.45); border-color: rgba(212,168,67,.5); }
 .heat-cell.h3 { background: rgba(212,168,67,.7); border-color: var(--accent2); }
 .heat-cell.h4 { background: var(--accent); border-color: var(--accent2); }
+.heat-cell.heat-future { opacity: .2; }
+.heat-cell.heat-hoje { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .resp-dist {
   display: flex;
@@ -1881,7 +1883,6 @@ async function carregarRendimento() {
   const el = document.getElementById('rendimento-container');
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Carregando...</div>';
 
-  // Busca histórico de revisões (últimos 90 dias)
   const desde = new Date();
   desde.setDate(desde.getDate() - 90);
 
@@ -1896,29 +1897,32 @@ async function carregarRendimento() {
   const r = revs || [];
   const c = cards || [];
 
-  // KPIs
-  const total = r.length;
-  const acertos = r.filter(x => ['bom','facil'].includes(x.resposta)).length;
-  const erros   = r.filter(x => x.resposta === 'errei').length;
-  const taxa    = total > 0 ? Math.round((acertos / total) * 100) : 0;
-  const efMedio = c.length > 0 ? (c.reduce((s,x) => s + parseFloat(x.ease_factor||2.5), 0) / c.length).toFixed(2) : '—';
+  const total     = r.length;
+  const acertos   = r.filter(x => ['bom','facil'].includes(x.resposta)).length;
+  const erros     = r.filter(x => x.resposta === 'errei').length;
+  const dificeis  = r.filter(x => x.resposta === 'dificil').length;
+  const faceis    = r.filter(x => x.resposta === 'facil').length;
+  const bons      = r.filter(x => x.resposta === 'bom').length;
+  const taxa      = total > 0 ? Math.round((acertos / total) * 100) : 0;
+  const efMedio   = c.length > 0
+    ? (c.reduce((s,x) => s + parseFloat(x.ease_factor||2.5), 0) / c.length).toFixed(2)
+    : '2.50';
   const totalLapses = c.reduce((s,x) => s + (x.lapses||0), 0);
   const totalCards  = c.length;
+  const novos       = c.filter(x=>x.state==='new').length;
+  const aprendendo  = c.filter(x=>x.state==='learning').length;
+  const emRevisao   = c.filter(x=>x.state==='review').length;
 
-  // Sequência de dias (streak)
-  const diasComEstudo = new Set(r.map(x => x.revisado_em.split('T')[0]));
+  const diasSet = new Set(r.map(x => x.revisado_em.split('T')[0]));
   let streak = 0;
-  const d = new Date(); d.setHours(0,0,0,0);
-  while (diasComEstudo.has(d.toISOString().split('T')[0])) {
+  const ds = new Date(); ds.setHours(0,0,0,0);
+  while (diasSet.has(ds.toISOString().split('T')[0])) {
     streak++;
-    d.setDate(d.getDate() - 1);
+    ds.setDate(ds.getDate() - 1);
   }
 
-  // Distribuição por resposta
-  const dist = { errei: 0, dificil: 0, bom: 0, facil: 0 };
-  r.forEach(x => { if (dist[x.resposta] !== undefined) dist[x.resposta]++; });
-
-  // Heatmap: últimos 84 dias (12 semanas)
+  // Heatmap 16 semanas organizado em colunas
+  const WEEKS = 16;
   const contDia = {};
   r.forEach(x => {
     const dia = x.revisado_em.split('T')[0];
@@ -1926,140 +1930,183 @@ async function carregarRendimento() {
   });
   const maxDia = Math.max(1, ...Object.values(contDia));
 
-  const heatCells = [];
-  for (let i = 83; i >= 0; i--) {
-    const hd = new Date(); hd.setDate(hd.getDate() - i); hd.setHours(0,0,0,0);
-    const k = hd.toISOString().split('T')[0];
-    const cnt = contDia[k] || 0;
-    let cls = '';
-    if (cnt > 0) {
+  const hoje0 = new Date(); hoje0.setHours(0,0,0,0);
+  const dow   = hoje0.getDay();
+  const startDay = new Date(hoje0);
+  startDay.setDate(startDay.getDate() - dow - (WEEKS-1)*7);
+
+  const weekCols = [];
+  const monthLabels = [];
+  for (let w = 0; w < WEEKS; w++) {
+    const col = [];
+    for (let d = 0; d < 7; d++) {
+      const dt = new Date(startDay);
+      dt.setDate(dt.getDate() + w*7 + d);
+      const k   = dt.toISOString().split('T')[0];
+      const cnt = contDia[k] || 0;
       const pct = cnt / maxDia;
-      cls = pct < .25 ? 'h1' : pct < .5 ? 'h2' : pct < .75 ? 'h3' : 'h4';
+      const cls = cnt === 0 ? '' : pct < .25 ? 'h1' : pct < .5 ? 'h2' : pct < .75 ? 'h3' : 'h4';
+      const isFuture = dt > hoje0;
+      const isHoje2  = k === hoje0.toISOString().split('T')[0];
+      col.push({ k, cnt, cls, isFuture, isHoje: isHoje2, dt });
     }
-    heatCells.push(`<div class="heat-cell ${cls}" title="${k}: ${cnt} revisões"></div>`);
+    const m = col[0].dt.toLocaleDateString('pt-BR', { month:'short' });
+    monthLabels.push(w === 0 || col[0].dt.getDate() <= 7 ? m : '');
+    weekCols.push(col);
   }
 
-  // Barras de distribuição
-  const maxDist = Math.max(1, ...Object.values(dist));
-  function barH(v) { return Math.round((v/maxDist)*60); }
+  const DOW_LABELS = ['D','S','T','Q','Q','S','S'];
+  const heatRows = DOW_LABELS.map((lbl, di) =>
+    '<div style="display:flex;gap:2px;align-items:center;">' +
+    '<div style="width:10px;font-size:9px;color:var(--text3);font-family:var(--mono);flex-shrink:0;">' + (di%2===1?lbl:'') + '</div>' +
+    weekCols.map(col => {
+      const cell = col[di];
+      const extra = (cell.isFuture ? ' heat-future' : '') + (cell.isHoje ? ' heat-hoje' : '');
+      return '<div class="heat-cell ' + cell.cls + extra + '" title="' + cell.k + (cell.cnt ? ': '+cell.cnt+' revisoes' : '') + '"></div>';
+    }).join('') +
+    '</div>'
+  ).join('');
 
-  // EF distribution dos cards
-  const efBuckets = { '1.3–1.7': 0, '1.7–2.1': 0, '2.1–2.5': 0, '2.5–2.9': 0, '2.9+': 0 };
+  const monthRow =
+    '<div style="display:flex;gap:2px;margin-bottom:3px;margin-left:12px;">' +
+    weekCols.map((col,wi) =>
+      '<div style="width:13px;font-size:9px;color:var(--text3);font-family:var(--mono);overflow:hidden;white-space:nowrap;">' +
+      (monthLabels[wi] || '') + '</div>'
+    ).join('') +
+    '</div>';
+
+  const heatHtml = monthRow + heatRows +
+    '<div style="margin-top:.75rem;display:flex;align-items:center;gap:.4rem;font-size:10px;color:var(--text3);font-family:var(--mono);">' +
+    'Menos <div class="heat-cell"></div><div class="heat-cell h1"></div><div class="heat-cell h2"></div><div class="heat-cell h3"></div><div class="heat-cell h4"></div> Mais' +
+    '</div>';
+
+  // EF buckets
+  const efBuckets = [
+    { label:'1.3 – 1.7', min:1.3, max:1.7, count:0, color:'var(--red)' },
+    { label:'1.7 – 2.1', min:1.7, max:2.1, count:0, color:'var(--orange)' },
+    { label:'2.1 – 2.5', min:2.1, max:2.5, count:0, color:'var(--accent)' },
+    { label:'2.5 – 2.9', min:2.5, max:2.9, count:0, color:'var(--blue)' },
+    { label:'2.9+',      min:2.9, max:99,  count:0, color:'var(--green)' },
+  ];
   c.forEach(x => {
     const ef = parseFloat(x.ease_factor||2.5);
-    if (ef < 1.7) efBuckets['1.3–1.7']++;
-    else if (ef < 2.1) efBuckets['1.7–2.1']++;
-    else if (ef < 2.5) efBuckets['2.1–2.5']++;
-    else if (ef < 2.9) efBuckets['2.5–2.9']++;
-    else efBuckets['2.9+']++;
+    const b  = efBuckets.find(b => ef >= b.min && ef < b.max);
+    if (b) b.count++;
   });
-  const maxEF = Math.max(1, ...Object.values(efBuckets));
+  const maxEF = Math.max(1, ...efBuckets.map(b=>b.count));
 
-  el.innerHTML = `
-    <!-- KPIs -->
-    <div class="rend-grid">
-      <div class="rend-kpi">
-        <div class="rend-kpi-label">Taxa de acerto</div>
-        <div class="rend-kpi-val" style="color:${taxa >= 70 ? 'var(--green)' : taxa >= 50 ? 'var(--accent)' : 'var(--red)'}">${taxa}%</div>
-        <div class="rend-kpi-sub">${acertos} acertos / ${total} revisões</div>
-      </div>
-      <div class="rend-kpi">
-        <div class="rend-kpi-label">Streak atual</div>
-        <div class="rend-kpi-val" style="color:var(--accent)">${streak}</div>
-        <div class="rend-kpi-sub">dias consecutivos</div>
-      </div>
-      <div class="rend-kpi">
-        <div class="rend-kpi-label">EF médio</div>
-        <div class="rend-kpi-val" style="color:var(--blue)">${efMedio}</div>
-        <div class="rend-kpi-sub">ease factor médio</div>
-      </div>
-      <div class="rend-kpi">
-        <div class="rend-kpi-label">Total de lapsos</div>
-        <div class="rend-kpi-val" style="color:var(--red)">${totalLapses}</div>
-        <div class="rend-kpi-sub">em ${totalCards} cards</div>
-      </div>
-    </div>
+  const dist = { errei: erros, dificil: dificeis, bom: bons, facil: faceis };
+  const distColors = { errei:'var(--red)', dificil:'var(--orange)', bom:'var(--blue)', facil:'var(--green)' };
+  const distLabels = { errei:'Errei', dificil:'Difícil', bom:'Bom', facil:'Fácil' };
+  const maxDist = Math.max(1, ...Object.values(dist));
 
-    <!-- Heatmap -->
-    <div class="rend-heat-wrap">
-      <div class="rend-section-title">Atividade — últimas 12 semanas</div>
-      <div class="heat-grid">${heatCells.join('')}</div>
-      <div style="margin-top:.75rem;display:flex;align-items:center;gap:.5rem;font-size:11px;color:var(--text3);font-family:var(--mono);">
-        Menos
-        <div class="heat-cell"></div>
-        <div class="heat-cell h1"></div>
-        <div class="heat-cell h2"></div>
-        <div class="heat-cell h3"></div>
-        <div class="heat-cell h4"></div>
-        Mais
-      </div>
-    </div>
+  // Ring SVG
+  const R = 36, CX = 44, CY = 44;
+  const circ = +(2 * Math.PI * R).toFixed(2);
+  const fill  = +(circ * taxa / 100).toFixed(2);
+  const taxaColor = taxa >= 80 ? 'var(--green)' : taxa >= 60 ? 'var(--accent)' : taxa >= 40 ? 'var(--orange)' : 'var(--red)';
 
-    <!-- Distribuição de respostas -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.75rem;">
-      <div class="rend-heat-wrap" style="margin-bottom:0;">
-        <div class="rend-section-title">Distribuição de respostas</div>
-        <div class="resp-dist">
-          <div class="resp-bar-col">
-            <div class="bar-val" style="color:var(--red)">${dist.errei}</div>
-            <div class="bar" style="height:${barH(dist.errei)}px;background:var(--red);opacity:.7"></div>
-            <div class="bar-label">Errei</div>
-          </div>
-          <div class="resp-bar-col">
-            <div class="bar-val" style="color:var(--orange)">${dist.dificil}</div>
-            <div class="bar" style="height:${barH(dist.dificil)}px;background:var(--orange);opacity:.7"></div>
-            <div class="bar-label">Difícil</div>
-          </div>
-          <div class="resp-bar-col">
-            <div class="bar-val" style="color:var(--blue)">${dist.bom}</div>
-            <div class="bar" style="height:${barH(dist.bom)}px;background:var(--blue);opacity:.7"></div>
-            <div class="bar-label">Bom</div>
-          </div>
-          <div class="resp-bar-col">
-            <div class="bar-val" style="color:var(--green)">${dist.facil}</div>
-            <div class="bar" style="height:${barH(dist.facil)}px;background:var(--green);opacity:.7"></div>
-            <div class="bar-label">Fácil</div>
-          </div>
-        </div>
-      </div>
+  const pct = p => totalCards ? Math.round(p/totalCards*100) : 0;
 
-      <div class="rend-heat-wrap" style="margin-bottom:0;">
-        <div class="rend-section-title">Distribuição de Ease Factor</div>
-        <div class="rend-bar-wrap" style="margin-bottom:0;">
-          ${Object.entries(efBuckets).map(([k,v]) => `
-          <div class="rend-bar-row">
-            <div class="rend-bar-label">${k}</div>
-            <div class="rend-bar-track">
-              <div class="rend-bar-fill" style="width:${Math.round((v/maxEF)*100)}%;background:var(--accent);opacity:.8"></div>
-            </div>
-            <div class="rend-bar-val">${v}</div>
-          </div>`).join('')}
-        </div>
-      </div>
-    </div>
+  el.innerHTML =
+    // KPI row
+    '<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:.75rem;margin-bottom:1.5rem;">' +
 
-    <!-- Estado dos cards -->
-    <div class="rend-heat-wrap">
-      <div class="rend-section-title">Estado atual dos cards</div>
-      <div class="rend-bar-wrap" style="margin-bottom:0;">
-        <div class="rend-bar-row">
-          <div class="rend-bar-label">Novos</div>
-          <div class="rend-bar-track"><div class="rend-bar-fill" style="width:${Math.round((c.filter(x=>x.state==='new').length/Math.max(1,totalCards))*100)}%;background:var(--blue)"></div></div>
-          <div class="rend-bar-val">${c.filter(x=>x.state==='new').length}</div>
-        </div>
-        <div class="rend-bar-row">
-          <div class="rend-bar-label">Aprendendo</div>
-          <div class="rend-bar-track"><div class="rend-bar-fill" style="width:${Math.round((c.filter(x=>x.state==='learning').length/Math.max(1,totalCards))*100)}%;background:var(--orange)"></div></div>
-          <div class="rend-bar-val">${c.filter(x=>x.state==='learning').length}</div>
-        </div>
-        <div class="rend-bar-row">
-          <div class="rend-bar-label">Revisão</div>
-          <div class="rend-bar-track"><div class="rend-bar-fill" style="width:${Math.round((c.filter(x=>x.state==='review').length/Math.max(1,totalCards))*100)}%;background:var(--green)"></div></div>
-          <div class="rend-bar-val">${c.filter(x=>x.state==='review').length}</div>
-        </div>
-      </div>
-    </div>
-  `;
+    // Ring
+    '<div class="rend-kpi" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.25rem 1.75rem;gap:.25rem;">' +
+    '<div class="rend-kpi-label" style="text-align:center;">Taxa de acerto</div>' +
+    '<svg width="88" height="88" viewBox="0 0 88 88">' +
+    '<circle cx="' + CX + '" cy="' + CY + '" r="' + R + '" fill="none" stroke="var(--bg4)" stroke-width="7"/>' +
+    '<circle cx="' + CX + '" cy="' + CY + '" r="' + R + '" fill="none" stroke="' + taxaColor + '" stroke-width="7"' +
+    ' stroke-dasharray="' + fill + ' ' + circ + '" stroke-dashoffset="' + (circ/4).toFixed(2) + '"' +
+    ' stroke-linecap="round"/>' +
+    '<text x="' + CX + '" y="' + CY + '" text-anchor="middle" dominant-baseline="central"' +
+    ' font-family="IBM Plex Mono,monospace" font-size="14" font-weight="500" fill="' + taxaColor + '">' + taxa + '%</text>' +
+    '</svg>' +
+    '<div class="rend-kpi-sub" style="text-align:center;">' + acertos + ' de ' + total + ' revisões</div>' +
+    '</div>' +
+
+    // Streak
+    '<div class="rend-kpi" style="display:flex;flex-direction:column;justify-content:space-between;">' +
+    '<div class="rend-kpi-label">🔥 Streak</div>' +
+    '<div class="rend-kpi-val" style="color:var(--accent);font-size:42px;">' + streak + '</div>' +
+    '<div class="rend-kpi-sub">dias consecutivos</div>' +
+    '<div style="margin-top:.75rem;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;">' +
+    '<div style="width:' + Math.min(100,streak*10) + '%;height:100%;background:var(--accent);border-radius:2px;"></div>' +
+    '</div></div>' +
+
+    // EF Médio
+    '<div class="rend-kpi" style="display:flex;flex-direction:column;justify-content:space-between;">' +
+    '<div class="rend-kpi-label">Ease Factor médio</div>' +
+    '<div class="rend-kpi-val" style="color:var(--blue);font-size:42px;">' + efMedio + '</div>' +
+    '<div class="rend-kpi-sub">ideal: acima de 2.0</div>' +
+    '<div style="margin-top:.75rem;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;">' +
+    '<div style="width:' + Math.min(100, Math.round(((parseFloat(efMedio)-1.3)/(3.0-1.3))*100)) + '%;height:100%;background:var(--blue);border-radius:2px;"></div>' +
+    '</div></div>' +
+
+    // Baralho
+    '<div class="rend-kpi" style="display:flex;flex-direction:column;gap:.4rem;">' +
+    '<div class="rend-kpi-label">Baralho — ' + totalCards + ' cards</div>' +
+    ['new','learning','review'].map((st,i) => {
+      const cnt = [novos,aprendendo,emRevisao][i];
+      const col = ['var(--blue)','var(--orange)','var(--green)'][i];
+      const lbl = ['Novos','Aprendendo','Revisão'][i];
+      return '<div style="display:flex;align-items:center;gap:.5rem;">' +
+        '<div style="width:7px;height:7px;border-radius:50%;background:' + col + ';flex-shrink:0;"></div>' +
+        '<div style="flex:1;font-size:11px;color:var(--text2);">' + lbl + '</div>' +
+        '<div style="font-family:var(--mono);font-size:12px;font-weight:500;">' + cnt + '</div>' +
+        '</div>' +
+        '<div style="height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-bottom:.25rem;">' +
+        '<div style="width:' + pct(cnt) + '%;height:100%;background:' + col + ';"></div>' +
+        '</div>';
+    }).join('') +
+    '<div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:.25rem;">' +
+    totalLapses + ' lapso' + (totalLapses!==1?'s':'') + ' acumulado' + (totalLapses!==1?'s':'') + '</div>' +
+    '</div>' +
+    '</div>' + // end KPI row
+
+    // Heatmap
+    '<div class="rend-heat-wrap">' +
+    '<div class="rend-section-title">Atividade — últimas ' + WEEKS + ' semanas</div>' +
+    heatHtml +
+    '</div>' +
+
+    // Bottom 2 cols
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">' +
+
+    // Dist respostas
+    '<div class="rend-heat-wrap" style="margin-bottom:0;">' +
+    '<div class="rend-section-title">Distribuição de respostas</div>' +
+    '<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;">' +
+    Object.entries(dist).map(([k,v]) =>
+      '<div style="display:flex;align-items:center;gap:.75rem;">' +
+      '<div style="width:52px;font-size:11px;font-family:var(--mono);color:var(--text2);flex-shrink:0;">' + distLabels[k] + '</div>' +
+      '<div style="flex:1;height:20px;background:var(--bg3);border-radius:3px;overflow:hidden;">' +
+      '<div style="height:100%;width:' + Math.round((v/maxDist)*100) + '%;background:' + distColors[k] + ';opacity:.75;border-radius:3px;"></div>' +
+      '</div>' +
+      '<div style="width:28px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--text2);">' + v + '</div>' +
+      '<div style="width:32px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--text3);">' + (total?Math.round(v/total*100)+'%':'—') + '</div>' +
+      '</div>'
+    ).join('') +
+    '</div></div>' +
+
+    // EF dist
+    '<div class="rend-heat-wrap" style="margin-bottom:0;">' +
+    '<div class="rend-section-title">Distribuição de Ease Factor</div>' +
+    '<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;">' +
+    efBuckets.map(b =>
+      '<div style="display:flex;align-items:center;gap:.75rem;">' +
+      '<div style="width:64px;font-size:11px;font-family:var(--mono);color:var(--text2);flex-shrink:0;">' + b.label + '</div>' +
+      '<div style="flex:1;height:20px;background:var(--bg3);border-radius:3px;overflow:hidden;">' +
+      '<div style="height:100%;width:' + Math.round((b.count/maxEF)*100) + '%;background:' + b.color + ';opacity:.75;border-radius:3px;"></div>' +
+      '</div>' +
+      '<div style="width:28px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--text2);">' + b.count + '</div>' +
+      '</div>'
+    ).join('') +
+    '<div style="margin-top:.5rem;font-size:10px;color:var(--text3);font-family:var(--mono);">Cards com EF abaixo de 2.0 precisam de mais atenção</div>' +
+    '</div></div>' +
+
+    '</div>'; // end bottom row
 }
 
 </script>
