@@ -580,6 +580,59 @@ body {
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── PASTE AREA ─────────────────────────────────── */
+.paste-area {
+  position: relative;
+  min-height: 80px;
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--r);
+  background: var(--bg3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .15s, background .15s;
+  outline: none;
+}
+.paste-area:focus {
+  border-color: var(--accent);
+  background: rgba(212,168,67,.05);
+}
+.paste-area.has-image { border-style: solid; min-height: 120px; }
+.paste-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--text3);
+  font-size: 12px;
+  font-family: var(--mono);
+  pointer-events: none;
+  user-select: none;
+}
+.paste-icon { font-size: 20px; opacity: .5; }
+.paste-preview {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 4px;
+  object-fit: contain;
+  display: block;
+  padding: 8px;
+}
+.paste-clear {
+  position: absolute;
+  top: 6px; right: 6px;
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text2);
+  font-size: 11px;
+  padding: 2px 7px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.paste-clear:hover { background: var(--red); border-color: var(--red); color: #fff; }
 </style>
 </head>
 <body>
@@ -871,16 +924,34 @@ body {
       <textarea id="card-frente-txt" rows="3" placeholder="Pergunta ou conceito..."></textarea>
     </div>
     <div class="form-field">
-      <label>Imagem frente (opcional)</label>
-      <input id="card-frente-file" type="file" accept="image/*"/>
+      <label>Imagem frente — cole com Ctrl+V aqui</label>
+      <div class="paste-area" id="paste-frente" tabindex="0"
+           onclick="this.focus()"
+           onkeydown="if(event.key==='Delete'||event.key==='Backspace') limparPaste('frente')">
+        <div class="paste-hint" id="paste-frente-hint">
+          <span class="paste-icon">⌘</span> Clique aqui e cole a imagem (Ctrl+V)
+        </div>
+        <img id="paste-frente-preview" class="paste-preview" style="display:none"/>
+        <button class="paste-clear" id="paste-frente-clear" style="display:none"
+                onclick="event.stopPropagation();limparPaste('frente')">✕</button>
+      </div>
     </div>
     <div class="form-field">
       <label>Verso</label>
       <textarea id="card-verso-txt" rows="3" placeholder="Resposta ou explicação..."></textarea>
     </div>
     <div class="form-field">
-      <label>Imagem verso (opcional)</label>
-      <input id="card-verso-file" type="file" accept="image/*"/>
+      <label>Imagem verso — cole com Ctrl+V aqui</label>
+      <div class="paste-area" id="paste-verso" tabindex="0"
+           onclick="this.focus()"
+           onkeydown="if(event.key==='Delete'||event.key==='Backspace') limparPaste('verso')">
+        <div class="paste-hint" id="paste-verso-hint">
+          <span class="paste-icon">⌘</span> Clique aqui e cole a imagem (Ctrl+V)
+        </div>
+        <img id="paste-verso-preview" class="paste-preview" style="display:none"/>
+        <button class="paste-clear" id="paste-verso-clear" style="display:none"
+                onclick="event.stopPropagation();limparPaste('verso')">✕</button>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-card')">Cancelar</button>
@@ -933,6 +1004,7 @@ async function conectar() {
 async function init() {
   await carregarDashboard();
   await renderSidebarProjetos();
+  initPasteAreas();
 }
 
 // Auto-conectar se houver credenciais salvas
@@ -1144,6 +1216,44 @@ async function salvarMateria() {
   if (state.currentCaderno?.id === caderno_id) abrirCaderno(caderno_id);
 }
 
+// Armazena os blobs das imagens coladas
+const pastedFiles = { frente: null, verso: null };
+
+function initPasteAreas() {
+  ['frente', 'verso'].forEach(lado => {
+    const area = document.getElementById('paste-' + lado);
+    area.addEventListener('paste', e => {
+      const item = [...e.clipboardData.items].find(i => i.type.startsWith('image/'));
+      if (!item) { toast('Nenhuma imagem no clipboard'); return; }
+      e.preventDefault();
+      const blob = item.getAsFile();
+      pastedFiles[lado] = blob;
+      const url = URL.createObjectURL(blob);
+      const preview = document.getElementById('paste-' + lado + '-preview');
+      const hint    = document.getElementById('paste-' + lado + '-hint');
+      const clear   = document.getElementById('paste-' + lado + '-clear');
+      preview.src = url;
+      preview.style.display = 'block';
+      hint.style.display    = 'none';
+      clear.style.display   = 'block';
+      area.classList.add('has-image');
+      toast('Imagem colada ✓');
+    });
+  });
+}
+
+function limparPaste(lado) {
+  pastedFiles[lado] = null;
+  const preview = document.getElementById('paste-' + lado + '-preview');
+  const hint    = document.getElementById('paste-' + lado + '-hint');
+  const clear   = document.getElementById('paste-' + lado + '-clear');
+  const area    = document.getElementById('paste-' + lado);
+  preview.src = ''; preview.style.display = 'none';
+  hint.style.display  = 'block';
+  clear.style.display = 'none';
+  area.classList.remove('has-image');
+}
+
 async function salvarCard() {
   const frente = document.getElementById('card-frente-txt').value.trim();
   const verso  = document.getElementById('card-verso-txt').value.trim();
@@ -1155,11 +1265,8 @@ async function salvarCard() {
 
   try {
     let frente_image_url = null, verso_image_url = null;
-    const fFile = document.getElementById('card-frente-file').files[0];
-    const vFile = document.getElementById('card-verso-file').files[0];
-
-    if (fFile) frente_image_url = await uploadImagem(fFile);
-    if (vFile) verso_image_url  = await uploadImagem(vFile);
+    if (pastedFiles.frente) frente_image_url = await uploadImagem(pastedFiles.frente);
+    if (pastedFiles.verso)  verso_image_url  = await uploadImagem(pastedFiles.verso);
 
     const { error } = await sb.from('cards').insert({
       materia_id, frente, verso, frente_image_url, verso_image_url,
@@ -1172,8 +1279,8 @@ async function salvarCard() {
     closeModal('modal-card');
     document.getElementById('card-frente-txt').value = '';
     document.getElementById('card-verso-txt').value = '';
-    document.getElementById('card-frente-file').value = '';
-    document.getElementById('card-verso-file').value = '';
+    limparPaste('frente');
+    limparPaste('verso');
     toast('Card criado ✓');
     if (state.currentMateria?.id === materia_id) abrirMateria(materia_id);
   } catch(e) {
@@ -1183,10 +1290,10 @@ async function salvarCard() {
   }
 }
 
-async function uploadImagem(file) {
-  const ext = file.name.split('.').pop();
+async function uploadImagem(blob) {
+  const ext = blob.type.split('/')[1] || 'png';
   const path = `cards/${crypto.randomUUID()}.${ext}`;
-  const { error } = await sb.storage.from('card-images').upload(path, file);
+  const { error } = await sb.storage.from('card-images').upload(path, blob, { contentType: blob.type });
   if (error) throw error;
   const { data } = sb.storage.from('card-images').getPublicUrl(path);
   return data.publicUrl;
