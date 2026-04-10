@@ -283,9 +283,9 @@
       align-items: flex-start;
       gap: 10px;
     }
-    .alerta-erro { background: rgba(218,54,51,.15); border: 1px solid rgba(218,54,51,.3); color: #ff7b72; }
-    .alerta-sucesso { background: rgba(35,134,54,.15); border: 1px solid rgba(35,134,54,.3); color: #56d364; }
-    .alerta-info { background: rgba(31,111,235,.1); border: 1px solid rgba(31,111,235,.3); color: #79c0ff; }
+    .alerta-erro    { background: rgba(218,54,51,.15); border: 1px solid rgba(218,54,51,.3); color: #ff7b72; }
+    .alerta-sucesso { background: rgba(35,134,54,.15);  border: 1px solid rgba(35,134,54,.3);  color: #56d364; }
+    .alerta-info    { background: rgba(31,111,235,.1);  border: 1px solid rgba(31,111,235,.3); color: #79c0ff; }
 
     /* ===== TABELA DE REVISÃO ===== */
     #secao-revisao { display: none; }
@@ -329,15 +329,8 @@
       border: 1px solid var(--borda);
       border-radius: var(--raio-lg);
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    thead {
-      background: var(--bg3);
-      border-bottom: 1px solid var(--borda);
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: var(--bg3); border-bottom: 1px solid var(--borda); }
     th {
       padding: 12px 14px;
       text-align: left;
@@ -356,7 +349,6 @@
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: rgba(255,255,255,.02); }
 
-    /* Células editáveis */
     .celula-editavel {
       width: 100%;
       min-height: 60px;
@@ -385,9 +377,9 @@
       font-weight: 600;
       white-space: nowrap;
     }
-    .tipo-mc   { background: rgba(31,111,235,.2);  color: #79c0ff; }
-    .tipo-ce   { background: rgba(210,153,34,.2);  color: #e3b341; }
-    .tipo-out  { background: rgba(139,148,158,.2); color: #8b949e; }
+    .tipo-mc  { background: rgba(31,111,235,.2);  color: #79c0ff; }
+    .tipo-ce  { background: rgba(210,153,34,.2);  color: #e3b341; }
+    .tipo-out { background: rgba(139,148,158,.2); color: #8b949e; }
 
     .btn-excluir-card {
       background: none;
@@ -405,10 +397,8 @@
       background: rgba(218,54,51,.1);
     }
 
-    /* Linha marcada para exclusão */
     tr.marcado-exclusao td { opacity: .4; text-decoration: line-through; }
 
-    /* Paginação */
     .paginacao {
       display: flex;
       align-items: center;
@@ -433,7 +423,7 @@
     .btn-pag.ativo { background: var(--acento); border-color: var(--acento); color: #fff; }
     .btn-pag:disabled { opacity: .4; cursor: not-allowed; }
 
-    /* ===== SUMÁRIO FINAL ===== */
+    /* ===== SUCESSO ===== */
     #secao-sucesso { display: none; }
     .grid-stats {
       display: grid;
@@ -448,24 +438,22 @@
       padding: 20px;
       text-align: center;
     }
-    .stat-num { font-size: 32px; font-weight: 700; color: var(--primario); }
+    .stat-num   { font-size: 32px; font-weight: 700; color: var(--primario); }
     .stat-label { font-size: 12px; color: var(--texto2); margin-top: 4px; }
 
-    /* ===== RESPONSIVO ===== */
     @media (max-width: 768px) {
       main { padding: 20px 16px; }
-      .steps { gap: 0; }
       .step span:last-child { display: none; }
       .step { padding: 8px; }
-      th:nth-child(3), td:nth-child(3) { display: none; } /* oculta banca em mobile */
+      th:nth-child(4), td:nth-child(4),
+      th:nth-child(5), td:nth-child(5) { display: none; }
     }
   </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <header>
-  <a href="/" class="logo">Concurso<span>Cards</span></a>
+  <a href="index.html" class="logo">Concurso<span>Cards</span></a>
   <span class="separador">/</span>
   <span class="titulo-header">Importar PDF com IA</span>
 </header>
@@ -495,16 +483,13 @@
     </div>
   </div>
 
-  <!-- ===== STEP 1: CONFIGURAÇÃO ===== -->
+  <!-- STEP 1: CONFIGURAÇÃO -->
   <div id="secao-config">
-
-    <!-- Destino -->
     <div class="card">
       <div class="card-titulo">
         <div class="badge-icone">📁</div>
         Destino dos cards
       </div>
-
       <div class="form-grupo">
         <label>Projeto</label>
         <select id="sel-projeto">
@@ -525,20 +510,17 @@
       </div>
     </div>
 
-    <!-- Upload -->
     <div class="card">
       <div class="card-titulo">
         <div class="badge-icone">📄</div>
         Arquivo PDF
       </div>
-
       <div class="upload-zone" id="upload-zone">
         <input type="file" id="input-pdf" accept=".pdf" />
         <div class="upload-icone">📥</div>
         <div class="upload-texto">Arraste o PDF aqui ou clique para selecionar</div>
-        <div class="upload-sub">Apenas arquivos PDF · Máximo 50 MB · PDFs digitais (não escaneados)</div>
+        <div class="upload-sub">Apenas arquivos PDF · Máximo 50 MB</div>
       </div>
-
       <div class="arquivo-selecionado" id="arquivo-selecionado">
         <span style="font-size:28px">📋</span>
         <div class="arquivo-info">
@@ -549,11 +531,12 @@
       </div>
     </div>
 
-    <!-- Alerta de aviso -->
     <div class="alerta alerta-info">
       <span>ℹ️</span>
       <div>
-        <strong>Como funciona:</strong> o PDF é enviado ao servidor, o texto é extraído e analisado pelo Claude (IA da Anthropic), que identifica automaticamente questões e gabaritos. O processo pode levar de 30s a 5 minutos dependendo do tamanho do arquivo.
+        <strong>Como funciona:</strong> o PDF é enviado ao servidor e analisado pelo Gemini (IA do Google),
+        que identifica automaticamente questões e gabaritos. O processo pode levar de 30s a 5 minutos
+        dependendo do tamanho do arquivo.
       </div>
     </div>
 
@@ -564,7 +547,7 @@
     </div>
   </div>
 
-  <!-- ===== STEP 2: PROGRESSO ===== -->
+  <!-- STEP 2: PROGRESSO -->
   <div id="secao-progresso" class="card">
     <div class="card-titulo">
       <div class="badge-icone">⚙️</div>
@@ -583,7 +566,7 @@
     </p>
   </div>
 
-  <!-- ===== STEP 3: REVISÃO ===== -->
+  <!-- STEP 3: REVISÃO -->
   <div id="secao-revisao">
     <div class="card">
       <div class="card-titulo">
@@ -594,9 +577,9 @@
 
       <div id="alerta-revisao"></div>
 
-      <!-- Toolbar -->
       <div class="toolbar-revisao">
-        <input class="busca-input" id="busca-input" placeholder="🔍 Buscar na frente ou verso..." oninput="filtrarTabela()" />
+        <input class="busca-input" id="busca-input"
+          placeholder="🔍 Buscar na frente ou verso..." oninput="filtrarTabela()" />
         <select class="filtro-tipo" id="filtro-tipo" onchange="filtrarTabela()">
           <option value="">Todos os tipos</option>
           <option value="multipla_escolha">Múltipla escolha</option>
@@ -610,24 +593,21 @@
         </button>
       </div>
 
-      <!-- Tabela -->
       <div class="tabela-wrap">
         <table>
           <thead>
             <tr>
               <th style="width:40px">
-                <input type="checkbox" id="check-todos" onchange="toggleTodos(this)" title="Selecionar todos" />
+                <input type="checkbox" id="check-todos" onchange="toggleTodos(this)" />
               </th>
-              <th style="width:38%">Frente (Questão)</th>
-              <th style="width:38%">Verso (Resposta + Justificativa)</th>
+              <th style="width:36%">Frente (Questão)</th>
+              <th style="width:36%">Verso (Resposta + Justificativa)</th>
               <th style="width:12%">Tipo</th>
-              <th style="width:8%">Banca/Ano</th>
+              <th style="width:10%">Banca/Ano</th>
               <th style="width:40px"></th>
             </tr>
           </thead>
-          <tbody id="tabela-body">
-            <!-- Preenchido por JS -->
-          </tbody>
+          <tbody id="tabela-body"></tbody>
         </table>
         <div class="paginacao">
           <span id="pag-info">0 de 0</span>
@@ -644,7 +624,7 @@
     </div>
   </div>
 
-  <!-- ===== STEP 4: SUCESSO ===== -->
+  <!-- STEP 4: SUCESSO -->
   <div id="secao-sucesso" class="card">
     <div class="card-titulo">
       <div class="badge-icone">🎉</div>
@@ -666,7 +646,7 @@
     </div>
     <div class="acoes">
       <button class="btn btn-secundario" onclick="novaImportacao()">📥 Nova importação</button>
-      <a href="/estudar.html" class="btn btn-primario">📚 Estudar agora →</a>
+      <a href="index.html" class="btn btn-primario">📚 Voltar ao app →</a>
     </div>
   </div>
 
@@ -674,93 +654,100 @@
 
 <script>
 // ================================================================
-// ConcursoCards — Página de Importação de PDF via IA
+// ConcursoCards — Importar PDF via Gemini
+// CORREÇÃO: usa variável "sb" (igual ao index.html) para evitar
+// conflito com o objeto global "window.supabase" (a biblioteca)
 // ================================================================
 
-// -------- CONFIGURAÇÃO (ajuste para seu projeto) --------
+// ── Credenciais (mesmas do index.html) ──────────────────────────
 const SUPABASE_URL  = 'https://njtafndgdjlihmwrteep.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qdGFmbmRnZGpsaWhtd3J0ZWVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NDM0NDksImV4cCI6MjA5MTMxOTQ0OX0.F_qYBkQQaeo4YHQIC6kjXE0yDl1IJpeTefZi5KE5_Ks';
 const EDGE_FUNCTION = `${SUPABASE_URL}/functions/v1/importar-pdf`;
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// ── Cliente Supabase — "sb", nunca "supabase" (nome reservado) ──
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-// -------- ESTADO GLOBAL --------
+// ── Estado global ────────────────────────────────────────────────
 let arquivoSelecionado = null;
-let cardsGerados = [];       // todos os cards da IA
-let cardsFiltrados = [];     // após busca/filtro
-let pagAtual = 1;
-const POR_PAGINA = 15;
-let jobIdAtual = null;
+let cardsGerados       = [];
+let cardsFiltrados     = [];
+let pagAtual           = 1;
+const POR_PAGINA       = 15;
+let jobIdAtual         = null;
 
 // ================================================================
 // INICIALIZAÇÃO
 // ================================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  await verificarAuth();
+  // Verifica se o usuário configurou o app (cc_url no localStorage)
+  // O index.html não usa Supabase Auth nativo — usa configuração manual
+  const ccUrl = localStorage.getItem('cc_url');
+  if (!ccUrl) {
+    window.location.href = 'index.html';
+    return;
+  }
   await carregarProjetos();
   configurarUpload();
 });
 
-async function verificarAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    window.location.href = '/login.html';
-  }
-}
-
 // ================================================================
-// CARREGAMENTO DE HIERARQUIA
+// HIERARQUIA: PROJETOS → CADERNOS → MATÉRIAS
 // ================================================================
 async function carregarProjetos() {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('projetos')
     .select('id, nome')
     .order('nome');
 
+  const sel = document.getElementById('sel-projeto');
+
   if (error || !data?.length) {
-    mostrarAlerta('alerta-progresso', 'Nenhum projeto encontrado. Crie um projeto primeiro.', 'erro');
+    sel.innerHTML = '<option value="">— Nenhum projeto encontrado —</option>';
+    mostrarAlerta('alerta-progresso',
+      'Nenhum projeto encontrado. Crie um projeto no app primeiro.', 'erro');
     return;
   }
 
-  const sel = document.getElementById('sel-projeto');
   sel.innerHTML = '<option value="">— Selecione um projeto —</option>'
-    + data.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+    + data.map(p => `<option value="${p.id}">${escapar(p.nome)}</option>`).join('');
   sel.onchange = () => carregarCadernos(sel.value);
 }
 
 async function carregarCadernos(projetoId) {
   const selC = document.getElementById('sel-caderno');
   const selM = document.getElementById('sel-materia');
-  selC.disabled = true; selC.innerHTML = '<option>Carregando...</option>';
-  selM.disabled = true; selM.innerHTML = '<option value="">— Selecione um caderno —</option>';
-
+  selC.disabled = true;
+  selC.innerHTML = '<option>Carregando...</option>';
+  selM.disabled = true;
+  selM.innerHTML = '<option value="">— Selecione um caderno —</option>';
   if (!projetoId) return;
 
-  const { data } = await supabase
+  const { data } = await sb
     .from('cadernos')
     .select('id, nome')
     .eq('projeto_id', projetoId)
     .order('nome');
 
   selC.innerHTML = '<option value="">— Selecione um caderno —</option>'
-    + (data || []).map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-  selC.disabled = false;
-  selC.onchange = () => carregarMaterias(selC.value);
+    + (data || []).map(c => `<option value="${c.id}">${escapar(c.nome)}</option>`).join('');
+  selC.disabled  = false;
+  selC.onchange  = () => carregarMaterias(selC.value);
 }
 
 async function carregarMaterias(cadernoId) {
   const selM = document.getElementById('sel-materia');
-  selM.disabled = true; selM.innerHTML = '<option>Carregando...</option>';
+  selM.disabled = true;
+  selM.innerHTML = '<option>Carregando...</option>';
   if (!cadernoId) return;
 
-  const { data } = await supabase
+  const { data } = await sb
     .from('materias')
     .select('id, nome')
     .eq('caderno_id', cadernoId)
     .order('nome');
 
   selM.innerHTML = '<option value="">— Selecione uma matéria —</option>'
-    + (data || []).map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+    + (data || []).map(m => `<option value="${m.id}">${escapar(m.nome)}</option>`).join('');
   selM.disabled = false;
 }
 
@@ -768,14 +755,14 @@ async function carregarMaterias(cadernoId) {
 // UPLOAD DE ARQUIVO
 // ================================================================
 function configurarUpload() {
-  const zone = document.getElementById('upload-zone');
+  const zone  = document.getElementById('upload-zone');
   const input = document.getElementById('input-pdf');
 
-  input.onchange = (e) => selecionarArquivo(e.target.files[0]);
+  input.onchange  = (e) => selecionarArquivo(e.target.files[0]);
 
-  zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('dragover'); };
-  zone.ondragleave = () => zone.classList.remove('dragover');
-  zone.ondrop = (e) => {
+  zone.ondragover  = (e) => { e.preventDefault(); zone.classList.add('dragover'); };
+  zone.ondragleave = ()  => zone.classList.remove('dragover');
+  zone.ondrop      = (e) => {
     e.preventDefault();
     zone.classList.remove('dragover');
     const file = e.dataTransfer.files[0];
@@ -787,11 +774,11 @@ function configurarUpload() {
 function selecionarArquivo(file) {
   if (!file) return;
   if (file.size > 50 * 1024 * 1024) {
-    alert('Arquivo muito grande. Máximo permitido: 50 MB.');
+    alert('Arquivo muito grande. Máximo: 50 MB.');
     return;
   }
   arquivoSelecionado = file;
-  document.getElementById('arquivo-nome').textContent = file.name;
+  document.getElementById('arquivo-nome').textContent    = file.name;
   document.getElementById('arquivo-tamanho').textContent = formatarTamanho(file.size);
   document.getElementById('arquivo-selecionado').classList.add('visivel');
 }
@@ -803,7 +790,7 @@ function removerArquivo() {
 }
 
 function formatarTamanho(bytes) {
-  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024)        return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
@@ -812,45 +799,43 @@ function formatarTamanho(bytes) {
 // PROCESSAMENTO
 // ================================================================
 async function iniciarProcessamento() {
-  // Validações
   const materiaId = document.getElementById('sel-materia').value;
-  if (!materiaId) { alert('Selecione uma matéria de destino.'); return; }
-  if (!arquivoSelecionado) { alert('Selecione um arquivo PDF.'); return; }
+  if (!materiaId)          { alert('Selecione uma matéria de destino.'); return; }
+  if (!arquivoSelecionado) { alert('Selecione um arquivo PDF.');         return; }
 
-  // Criar job no banco
-  const { data: { session } } = await supabase.auth.getSession();
-  const { data: job, error: jobError } = await supabase
+  // Cria o registro do job no banco
+  const { data: job, error: jobError } = await sb
     .from('import_jobs')
     .insert({
-      user_id: session.user.id,
-      materia_id: materiaId,
+      materia_id:   materiaId,
       arquivo_nome: arquivoSelecionado.name,
-      status: 'pendente',
+      status:       'pendente',
     })
     .select()
     .single();
 
-  if (jobError) { alert('Erro ao criar job: ' + jobError.message); return; }
+  if (jobError) {
+    alert('Erro ao criar job: ' + jobError.message);
+    return;
+  }
   jobIdAtual = job.id;
 
-  // Mudar para tela de progresso
   irParaStep(2);
   atualizarStatus('Enviando PDF para processamento...');
 
   try {
-    // Montar FormData
     const form = new FormData();
-    form.append('arquivo', arquivoSelecionado);
-    form.append('job_id', jobIdAtual);
+    form.append('arquivo',    arquivoSelecionado);
+    form.append('job_id',     jobIdAtual);
     form.append('materia_id', materiaId);
 
     atualizarStatus('IA analisando questões... isso pode levar alguns minutos ⏳');
 
-    // Chamar Edge Function
+    // Usa a anon key como token — a Edge Function valida pelo Supabase
     const resp = await fetch(EDGE_FUNCTION, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${session.access_token}` },
-      body: form,
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${SUPABASE_ANON}` },
+      body:    form,
     });
 
     const resultado = await resp.json();
@@ -859,14 +844,12 @@ async function iniciarProcessamento() {
       throw new Error(resultado.erro || 'Erro desconhecido no processamento.');
     }
 
-    // Sucesso — ir para revisão
     cardsGerados = resultado.cards.map((c, i) => ({ ...c, _id: i, _excluir: false }));
     irParaStep(3);
     renderizarTabela();
 
   } catch (err) {
-    mostrarAlerta('alerta-progresso',
-      `Erro no processamento: ${err.message}`, 'erro');
+    mostrarAlerta('alerta-progresso', `Erro no processamento: ${err.message}`, 'erro');
     document.getElementById('progress-bar').style.display = 'none';
   }
 }
@@ -879,16 +862,15 @@ function atualizarStatus(msg) {
 // TABELA DE REVISÃO
 // ================================================================
 function renderizarTabela() {
-  cardsFiltrados = aplicarFiltros();
-  const total = cardsFiltrados.length;
+  cardsFiltrados  = aplicarFiltros();
+  const total     = cardsFiltrados.length;
   const totalPags = Math.max(1, Math.ceil(total / POR_PAGINA));
   if (pagAtual > totalPags) pagAtual = totalPags;
 
   const inicio = (pagAtual - 1) * POR_PAGINA;
-  const fatia = cardsFiltrados.slice(inicio, inicio + POR_PAGINA);
+  const fatia  = cardsFiltrados.slice(inicio, inicio + POR_PAGINA);
 
-  const tbody = document.getElementById('tabela-body');
-  tbody.innerHTML = fatia.map(card => `
+  document.getElementById('tabela-body').innerHTML = fatia.map(card => `
     <tr id="tr-${card._id}" class="${card._excluir ? 'marcado-exclusao' : ''}">
       <td>
         <input type="checkbox" class="check-card" data-id="${card._id}"
@@ -906,21 +888,17 @@ function renderizarTabela() {
         >${escapar(card.verso || '')}</textarea>
       </td>
       <td>
-        <span class="tipo-badge ${tipoClasse(card.tipo)}">
-          ${tipoLabel(card.tipo)}
-        </span>
+        <span class="tipo-badge ${tipoClasse(card.tipo)}">${tipoLabel(card.tipo)}</span>
       </td>
       <td style="font-size:11px;color:var(--texto2)">
         ${card.banca || '—'}<br/>${card.ano || ''}
       </td>
       <td>
-        <button class="btn-excluir-card" title="Remover card"
-          onclick="removerCard(${card._id})">✕</button>
+        <button class="btn-excluir-card" onclick="removerCard(${card._id})">✕</button>
       </td>
     </tr>
   `).join('');
 
-  // Atualizar contadores
   const naoExcluidos = cardsGerados.filter(c => !c._excluir).length;
   document.getElementById('badge-total').textContent =
     `${naoExcluidos} de ${cardsGerados.length} cards`;
@@ -932,11 +910,10 @@ function renderizarTabela() {
 
 function aplicarFiltros() {
   const busca = document.getElementById('busca-input').value.toLowerCase();
-  const tipo = document.getElementById('filtro-tipo').value;
+  const tipo  = document.getElementById('filtro-tipo').value;
   return cardsGerados.filter(c => {
-    const textoBusca = ((c.frente || '') + ' ' + (c.verso || '')).toLowerCase();
-    return (!busca || textoBusca.includes(busca))
-        && (!tipo || c.tipo === tipo);
+    const txt = ((c.frente || '') + ' ' + (c.verso || '')).toLowerCase();
+    return (!busca || txt.includes(busca)) && (!tipo || c.tipo === tipo);
   });
 }
 
@@ -944,15 +921,15 @@ function filtrarTabela() { pagAtual = 1; renderizarTabela(); }
 
 function renderizarPaginacao(totalPags) {
   const cont = document.getElementById('pag-btns');
-  let html = `<button class="btn-pag" onclick="irPag(${pagAtual - 1})" ${pagAtual === 1 ? 'disabled' : ''}>‹</button>`;
+  let html = `<button class="btn-pag" onclick="irPag(${pagAtual-1})" ${pagAtual===1?'disabled':''}>‹</button>`;
   for (let i = 1; i <= totalPags; i++) {
     if (totalPags <= 7 || Math.abs(i - pagAtual) <= 2 || i === 1 || i === totalPags) {
-      html += `<button class="btn-pag ${i === pagAtual ? 'ativo' : ''}" onclick="irPag(${i})">${i}</button>`;
+      html += `<button class="btn-pag ${i===pagAtual?'ativo':''}" onclick="irPag(${i})">${i}</button>`;
     } else if (Math.abs(i - pagAtual) === 3) {
       html += `<span style="padding:0 4px;color:var(--texto2)">…</span>`;
     }
   }
-  html += `<button class="btn-pag" onclick="irPag(${pagAtual + 1})" ${pagAtual === totalPags ? 'disabled' : ''}>›</button>`;
+  html += `<button class="btn-pag" onclick="irPag(${pagAtual+1})" ${pagAtual===totalPags?'disabled':''}>›</button>`;
   cont.innerHTML = html;
 }
 
@@ -973,8 +950,7 @@ function toggleCard(id, marcado) {
   const card = cardsGerados.find(c => c._id === id);
   if (card) {
     card._excluir = marcado;
-    const tr = document.getElementById(`tr-${id}`);
-    if (tr) tr.classList.toggle('marcado-exclusao', marcado);
+    document.getElementById(`tr-${id}`)?.classList.toggle('marcado-exclusao', marcado);
   }
   const naoExcluidos = cardsGerados.filter(c => !c._excluir).length;
   document.getElementById('badge-total').textContent =
@@ -1000,15 +976,9 @@ function excluirMarcados() {
 }
 
 function adicionarCardManual() {
-  const novoId = Date.now();
   cardsGerados.unshift({
-    _id: novoId,
-    _excluir: false,
-    frente: '',
-    verso: '',
-    tipo: 'multipla_escolha',
-    banca: null,
-    ano: null,
+    _id: Date.now(), _excluir: false,
+    frente: '', verso: '', tipo: 'multipla_escolha', banca: null, ano: null,
   });
   pagAtual = 1;
   renderizarTabela();
@@ -1018,64 +988,62 @@ function adicionarCardManual() {
 // SALVAR CARDS NO SUPABASE
 // ================================================================
 async function salvarCards() {
-  const materiaId = document.getElementById('sel-materia').value;
-  const parasSalvar = cardsGerados.filter(c => !c._excluir && c.frente?.trim() && c.verso?.trim());
+  const materiaId  = document.getElementById('sel-materia').value;
+  const paraSalvar = cardsGerados.filter(c => !c._excluir && c.frente?.trim() && c.verso?.trim());
 
-  if (!parasSalvar.length) {
-    alert('Nenhum card válido para salvar. Verifique se frente e verso estão preenchidos.');
+  if (!paraSalvar.length) {
+    alert('Nenhum card válido. Verifique se frente e verso estão preenchidos.');
     return;
   }
 
   const btn = document.getElementById('btn-salvar');
-  btn.disabled = true;
+  btn.disabled    = true;
   btn.textContent = '⏳ Salvando...';
 
   try {
-    // Formatar cards para a tabela "cards" do banco
-    const { data: { session } } = await supabase.auth.getSession();
     const agora = new Date().toISOString();
 
-    const registros = parasSalvar.map(c => ({
-      materia_id:   materiaId,
-      user_id:      session.user.id,
-      frente:       c.frente.trim(),
-      verso:        c.verso.trim(),
-      // Campos SM-2 iniciais
-      interval:     0,
-      repetitions:  0,
-      easiness:     2.5,
-      next_review:  agora,
-      // Metadados opcionais
-      tags: [c.tipo, c.banca, c.ano].filter(Boolean),
+    // Schema compatível com o index.html
+    // (state, ease_factor, interval_days, learning_step, lapses, due_date)
+    const registros = paraSalvar.map(c => ({
+      materia_id:    materiaId,
+      frente:        c.frente.trim(),
+      verso:         c.verso.trim(),
+      state:         'new',
+      repetitions:   0,
+      ease_factor:   2.5,
+      interval_days: 0,
+      learning_step: 0,
+      lapses:        0,
+      due_date:      agora,
+      tags:          [c.tipo, c.banca, c.ano].filter(Boolean),
     }));
 
-    // Inserção em lotes de 100 (limite de segurança)
+    // Inserção em lotes de 100
     const LOTE = 100;
     for (let i = 0; i < registros.length; i += LOTE) {
-      const lote = registros.slice(i, i + LOTE);
-      const { error } = await supabase.from('cards').insert(lote);
-      if (error) throw new Error(`Erro ao salvar lote ${Math.ceil(i/LOTE)+1}: ${error.message}`);
+      const { error } = await sb.from('cards').insert(registros.slice(i, i + LOTE));
+      if (error) throw new Error(`Lote ${Math.ceil(i/LOTE)+1}: ${error.message}`);
     }
 
-    // Atualizar job como concluído
+    // Atualiza o job como concluído
     if (jobIdAtual) {
-      await supabase.from('import_jobs').update({
-        status: 'concluido',
-        total_cards: parasSalvar.length,
+      await sb.from('import_jobs').update({
+        status:      'concluido',
+        total_cards: paraSalvar.length,
       }).eq('id', jobIdAtual);
     }
 
-    // Mostrar tela de sucesso
-    const mc = parasSalvar.filter(c => c.tipo === 'multipla_escolha').length;
-    const ce = parasSalvar.filter(c => c.tipo === 'certo_errado').length;
-    document.getElementById('stat-salvos').textContent = parasSalvar.length;
-    document.getElementById('stat-mc').textContent = mc;
-    document.getElementById('stat-ce').textContent = ce;
+    const mc = paraSalvar.filter(c => c.tipo === 'multipla_escolha').length;
+    const ce = paraSalvar.filter(c => c.tipo === 'certo_errado').length;
+    document.getElementById('stat-salvos').textContent = paraSalvar.length;
+    document.getElementById('stat-mc').textContent     = mc;
+    document.getElementById('stat-ce').textContent     = ce;
     irParaStep(4);
 
   } catch (err) {
     mostrarAlerta('alerta-revisao', `Erro ao salvar: ${err.message}`, 'erro');
-    btn.disabled = false;
+    btn.disabled    = false;
     btn.textContent = '💾 Salvar cards selecionados';
   }
 }
@@ -1089,10 +1057,9 @@ function irParaStep(n) {
   SECOES.forEach((id, i) => {
     document.getElementById(id).style.display = i === n - 1 ? 'block' : 'none';
   });
-  // Atualizar indicadores
   for (let i = 1; i <= 4; i++) {
-    const el = document.getElementById(`step${i}-indicator`);
-    el.className = 'step ' + (i < n ? 'concluido' : i === n ? 'ativo' : '');
+    document.getElementById(`step${i}-indicator`).className =
+      'step ' + (i < n ? 'concluido' : i === n ? 'ativo' : '');
   }
   for (let i = 1; i <= 3; i++) {
     const linha = document.getElementById(`linha${i}${i+1}`);
@@ -1105,8 +1072,8 @@ function voltarConfig() { irParaStep(1); }
 
 function novaImportacao() {
   arquivoSelecionado = null;
-  cardsGerados = [];
-  jobIdAtual = null;
+  cardsGerados       = [];
+  jobIdAtual         = null;
   document.getElementById('input-pdf').value = '';
   document.getElementById('arquivo-selecionado').classList.remove('visivel');
   irParaStep(1);
@@ -1116,7 +1083,7 @@ function novaImportacao() {
 // UTILITÁRIOS
 // ================================================================
 function mostrarAlerta(containerId, msg, tipo = 'info') {
-  const icons = { erro: '❌', sucesso: '✅', info: 'ℹ️' };
+  const icons   = { erro: '❌', sucesso: '✅', info: 'ℹ️' };
   const classes = { erro: 'alerta-erro', sucesso: 'alerta-sucesso', info: 'alerta-info' };
   document.getElementById(containerId).innerHTML =
     `<div class="alerta ${classes[tipo]}">${icons[tipo]} ${msg}</div>`;
@@ -1124,22 +1091,22 @@ function mostrarAlerta(containerId, msg, tipo = 'info') {
 
 function tipoClasse(tipo) {
   if (tipo === 'multipla_escolha') return 'tipo-mc';
-  if (tipo === 'certo_errado') return 'tipo-ce';
+  if (tipo === 'certo_errado')     return 'tipo-ce';
   return 'tipo-out';
 }
 
 function tipoLabel(tipo) {
   if (tipo === 'multipla_escolha') return 'Múltipla';
-  if (tipo === 'certo_errado') return 'C/E';
+  if (tipo === 'certo_errado')     return 'C/E';
   return tipo || '—';
 }
 
 function escapar(str) {
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g,  '&amp;')
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;')
+    .replace(/"/g,  '&quot;');
 }
 </script>
 </body>
