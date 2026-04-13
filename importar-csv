@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ConcursoCards — Importar CSV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    :root {
+      --bg:        #0f0f0f;
+      --bg2:       #181818;
+      --bg3:       #222222;
+      --bg4:       #2a2a2a;
+      --border:    #333333;
+      --border2:   #444444;
+      --text:      #e8e6e0;
+      --text2:     #999490;
+      --text3:     #5a5856;
+      --accent:    #d4a843;
+      --accent2:   #b8913a;
+      --green:     #4caf82;
+      --red:       #e05555;
+      --blue:      #5b9bd5;
+      --orange:    #d4834a;
+      --mono:      'IBM Plex Mono', monospace;
+      --sans:      'IBM Plex Sans', sans-serif;
+      --r:         6px;
+      --r2:        10px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      height: 48px;
+      gap: 1rem;
+    }
+    .topbar-logo {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .topbar-sep { color: var(--border2); }
+    .topbar-title { font-size: 13px; color: var(--text2); }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+    }
+
+    /* ── STEPS ── */
+    .steps {
+      display: flex;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      gap: 0;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text3);
+      padding: 6px 16px;
+    }
+    .step.ativo { color: var(--text); }
+    .step.concluido { color: var(--green); }
+    .step-num {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 500;
+    }
+    .step.ativo .step-num { background: var(--accent); border-color: var(--accent); color: #0f0f0f; }
+    .step.concluido .step-num { background: var(--green); border-color: var(--green); color: #0f0f0f; }
+    .step-linha { flex: 1; height: 1px; background: var(--border); }
+    .step-linha.ativa { background: var(--green); }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      padding: 1.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .card-titulo {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text2);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    /* ── FORM ── */
+    .form-field { margin-bottom: 1.25rem; }
+    .form-field label {
+      display: block;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 6px;
+    }
+    select {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    select:focus { border-color: var(--accent); }
+    select option { background: var(--bg3); }
+
+    /* ── UPLOAD ZONE ── */
+    .upload-zone {
+      border: 1.5px dashed var(--border2);
+      border-radius: var(--r2);
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(212,168,67,.04);
+    }
+    .upload-zone input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
+    }
+    .upload-icone { font-size: 36px; margin-bottom: .75rem; opacity: .6; }
+    .upload-texto { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+    .upload-sub { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+
+    .arquivo-info {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 12px 14px;
+      margin-top: 12px;
+    }
+    .arquivo-info.visivel { display: flex; }
+    .arquivo-info-texto { flex: 1; }
+    .arquivo-info-nome { font-weight: 500; font-size: 13px; }
+    .arquivo-info-meta { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+    .btn-remover {
+      background: none; border: none;
+      color: var(--text3); cursor: pointer; font-size: 16px; padding: 2px 6px;
+    }
+    .btn-remover:hover { color: var(--red); }
+
+    /* ── BOTÕES ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: var(--r);
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 18px;
+      cursor: pointer;
+      border: 1px solid var(--border2);
+      background: var(--bg3);
+      color: var(--text);
+      transition: all .15s;
+      text-decoration: none;
+    }
+    .btn:hover { background: var(--bg4); border-color: var(--text3); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-accent { background: var(--accent); border-color: var(--accent); color: #0f0f0f; font-weight: 600; }
+    .btn-accent:hover:not(:disabled) { background: var(--accent2); border-color: var(--accent2); }
+    .btn-green { background: var(--green); border-color: var(--green); color: #0f0f0f; font-weight: 600; }
+    .btn-green:hover:not(:disabled) { filter: brightness(1.1); }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-danger { border-color: var(--red); color: var(--red); }
+    .btn-danger:hover { background: rgba(224,85,85,.08); }
+
+    .acoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: .5rem; }
+
+    /* ── ALERTA ── */
+    .alerta {
+      padding: 12px 14px;
+      border-radius: var(--r);
+      font-size: 13px;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.5;
+    }
+    .alerta-erro    { background: rgba(224,85,85,.1);  border: 1px solid rgba(224,85,85,.25);  color: #f08080; }
+    .alerta-sucesso { background: rgba(76,175,130,.1); border: 1px solid rgba(76,175,130,.25); color: #6fcfaa; }
+    .alerta-info    { background: rgba(91,155,213,.08); border: 1px solid rgba(91,155,213,.2); color: #7ab3d9; }
+    .alerta-aviso   { background: rgba(212,168,67,.08); border: 1px solid rgba(212,168,67,.2); color: var(--accent); }
+
+    /* ── PREVIEW TABELA ── */
+    #secao-preview { display: none; }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--accent);
+      color: #0f0f0f;
+      font-weight: 600;
+    }
+    .badge-verde { background: var(--green); }
+    .badge-azul  { background: var(--blue); color: #fff; }
+
+    .busca {
+      flex: 1; min-width: 180px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 12px;
+      padding: 7px 10px;
+      outline: none;
+    }
+    .busca:focus { border-color: var(--accent); }
+
+    .tabela-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead { background: var(--bg3); border-bottom: 1px solid var(--border); }
+    th {
+      padding: 10px 12px;
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text3);
+      white-space: nowrap;
+      font-weight: 400;
+    }
+    td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      color: var(--text2);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    tr.erro-linha td { background: rgba(224,85,85,.06); }
+
+    .celula-edit {
+      width: 100%;
+      min-height: 52px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 4px 6px;
+      resize: vertical;
+      transition: border-color .15s;
+    }
+    .celula-edit:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--bg3);
+    }
+
+    .linha-num {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text3);
+      text-align: center;
+    }
+    .btn-del-linha {
+      background: none; border: none;
+      color: var(--text3); cursor: pointer;
+      font-size: 14px; padding: 2px 6px;
+      border-radius: 4px;
+      transition: all .1s;
+    }
+    .btn-del-linha:hover { color: var(--red); background: rgba(224,85,85,.1); }
+
+    /* paginação */
+    .paginacao {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text3);
+    }
+    .pag-btns { display: flex; gap: 3px; }
+    .btn-pag {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      color: var(--text2);
+      padding: 4px 9px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 11px;
+      transition: all .1s;
+    }
+    .btn-pag:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn-pag.ativo { background: var(--accent); border-color: var(--accent); color: #0f0f0f; }
+    .btn-pag:disabled { opacity: .3; cursor: not-allowed; }
+
+    /* ── SUCESSO ── */
+    #secao-sucesso { display: none; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .75rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-num { font-family: var(--mono); font-size: 36px; font-weight: 500; color: var(--green); }
+    .stat-label { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: var(--mono); }
+
+    /* ── DICA ── */
+    .dica {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--r);
+      padding: 1rem 1.25rem;
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.7;
+      margin-bottom: 1.25rem;
+    }
+    .dica-titulo { font-family: var(--mono); font-size: 11px; color: var(--accent); margin-bottom: .5rem; text-transform: uppercase; letter-spacing: .06em; }
+
+    /* spinner */
+    .spinner {
+      width: 13px; height: 13px;
+      border: 2px solid var(--border2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .steps .step span { display: none; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="index.html" class="topbar-logo">ConcursoCards</a>
+  <span class="topbar-sep">/</span>
+  <span class="topbar-title">Importar CSV</span>
+</div>
+
+<div class="container">
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step ativo" id="step1-ind">
+      <div class="step-num">1</div>
+      <span>Configurar</span>
+    </div>
+    <div class="step-linha" id="linha12"></div>
+    <div class="step" id="step2-ind">
+      <div class="step-num">2</div>
+      <span>Revisar</span>
+    </div>
+    <div class="step-linha" id="linha23"></div>
+    <div class="step" id="step3-ind">
+      <div class="step-num">3</div>
+      <span>Salvar</span>
+    </div>
+  </div>
+
+  <!-- ══ STEP 1: CONFIGURAR ══ -->
+  <div id="secao-config">
+
+    <div class="dica">
+      <div class="dica-titulo">// Como usar</div>
+      Envie o PDF de estudo para o <strong>Claude no seu Projeto</strong> e peça "Extrair questões".
+      O Claude irá gerar um arquivo <strong>.csv</strong> com as questões na frente e os gabaritos no verso.
+      Baixe o CSV e faça o upload aqui para revisar e salvar os cards.
+    </div>
+
+    <!-- Destino -->
+    <div class="card">
+      <div class="card-titulo">◈ Destino dos cards</div>
+      <div class="form-field">
+        <label>Projeto</label>
+        <select id="sel-projeto"><option value="">— Carregando... —</option></select>
+      </div>
+      <div class="form-field">
+        <label>Caderno</label>
+        <select id="sel-caderno" disabled><option value="">— Selecione um projeto —</option></select>
+      </div>
+      <div class="form-field" style="margin-bottom:0">
+        <label>Matéria</label>
+        <select id="sel-materia" disabled><option value="">— Selecione um caderno —</option></select>
+      </div>
+    </div>
+
+    <!-- Upload CSV -->
+    <div class="card">
+      <div class="card-titulo">◈ Arquivo CSV</div>
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="input-csv" accept=".csv,text/csv" />
+        <div class="upload-icone">📊</div>
+        <div class="upload-texto">Arraste o CSV aqui ou clique para selecionar</div>
+        <div class="upload-sub">Apenas arquivos .csv gerados pelo Claude · UTF-8</div>
+      </div>
+      <div class="arquivo-info" id="arquivo-info">
+        <span style="font-size:24px">📄</span>
+        <div class="arquivo-info-texto">
+          <div class="arquivo-info-nome" id="arquivo-nome">—</div>
+          <div class="arquivo-info-meta" id="arquivo-meta">—</div>
+        </div>
+        <button class="btn-remover" onclick="removerArquivo()" title="Remover">✕</button>
+      </div>
+      <div id="alerta-parse" style="margin-top:.75rem"></div>
+    </div>
+
+    <div class="acoes">
+      <button class="btn btn-accent" id="btn-revisar" onclick="irParaRevisao()">
+        Revisar cards →
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 2: REVISAR ══ -->
+  <div id="secao-preview">
+    <div class="card">
+      <div class="card-titulo">◈ Revisar e editar cards</div>
+
+      <div id="alerta-revisao"></div>
+
+      <div class="toolbar">
+        <span class="badge" id="badge-total">0 cards</span>
+        <input class="busca" id="busca" placeholder="Buscar..." oninput="filtrar()" />
+        <button class="btn btn-sm" onclick="adicionarLinha()">＋ Adicionar</button>
+        <button class="btn btn-sm btn-danger" onclick="excluirMarcados()">🗑 Excluir selecionados</button>
+      </div>
+
+      <div class="tabela-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px">
+                <input type="checkbox" id="check-todos" onchange="toggleTodos(this)" />
+              </th>
+              <th style="width:24px">#</th>
+              <th style="width:44%">Frente (Questão + Alternativas)</th>
+              <th style="width:44%">Verso (Gabarito + Justificativa)</th>
+              <th style="width:32px"></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="paginacao">
+          <span id="pag-info">—</span>
+          <div class="pag-btns" id="pag-btns"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="acoes">
+      <button class="btn" onclick="voltarConfig()">← Voltar</button>
+      <button class="btn btn-green" id="btn-salvar" onclick="salvarCards()">
+        💾 Salvar cards
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 3: SUCESSO ══ -->
+  <div id="secao-sucesso" class="card">
+    <div class="card-titulo">◈ Importação concluída</div>
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="stat-num" id="stat-total">0</div>
+        <div class="stat-label">cards salvos</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="stat-novos" style="color:var(--blue)">0</div>
+        <div class="stat-label">prontos p/ estudo</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="stat-materia" style="color:var(--accent);font-size:14px;padding-top:8px">—</div>
+        <div class="stat-label">matéria destino</div>
+      </div>
+    </div>
+    <div class="acoes" style="justify-content:center;gap:1rem">
+      <button class="btn" onclick="novaImportacao()">📥 Nova importação</button>
+      <a href="index.html" class="btn btn-accent">▶ Estudar agora</a>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ================================================================
+// ConcursoCards — Importar CSV
+// Usa variável "sb" (padrão do projeto)
+// ================================================================
+
+const SUPABASE_URL  = 'https://njtafndgdjlihmwrteep.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qdGFmbmRnZGpsaWhtd3J0ZWVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NDM0NDksImV4cCI6MjA5MTMxOTQ0OX0.F_qYBkQQaeo4YHQIC6kjXE0yDl1IJpeTefZi5KE5_Ks';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── Estado ───────────────────────────────────────────────────────
+let cards          = [];   // todos os cards parseados
+let cardsFiltrados = [];   // após busca
+let pagAtual       = 1;
+const POR_PAG      = 20;
+let arquivoCSV     = null;
+
+// ================================================================
+// INIT
+// ================================================================
+document.addEventListener('DOMContentLoaded', async () => {
+  const ccUrl = localStorage.getItem('cc_url');
+  if (!ccUrl) { window.location.href = 'index.html'; return; }
+  await carregarProjetos();
+  configurarUpload();
+});
+
+// ================================================================
+// HIERARQUIA
+// ================================================================
+async function carregarProjetos() {
+  const { data } = await sb.from('projetos').select('id,nome').order('nome');
+  const sel = document.getElementById('sel-projeto');
+  if (!data?.length) {
+    sel.innerHTML = '<option value="">— Nenhum projeto —</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">— Selecione —</option>'
+    + data.map(p => `<option value="${p.id}">${esc(p.nome)}</option>`).join('');
+  sel.onchange = () => carregarCadernos(sel.value);
+}
+
+async function carregarCadernos(projetoId) {
+  const selC = document.getElementById('sel-caderno');
+  const selM = document.getElementById('sel-materia');
+  selC.disabled = true; selC.innerHTML = '<option>Carregando...</option>';
+  selM.disabled = true; selM.innerHTML = '<option value="">— Selecione um caderno —</option>';
+  if (!projetoId) return;
+  const { data } = await sb.from('cadernos').select('id,nome')
+    .eq('projeto_id', projetoId).order('nome');
+  selC.innerHTML = '<option value="">— Selecione —</option>'
+    + (data||[]).map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+  selC.disabled = false;
+  selC.onchange = () => carregarMaterias(selC.value);
+}
+
+async function carregarMaterias(cadernoId) {
+  const selM = document.getElementById('sel-materia');
+  selM.disabled = true; selM.innerHTML = '<option>Carregando...</option>';
+  if (!cadernoId) return;
+  const { data } = await sb.from('materias').select('id,nome')
+    .eq('caderno_id', cadernoId).order('nome');
+  selM.innerHTML = '<option value="">— Selecione —</option>'
+    + (data||[]).map(m => `<option value="${m.id}">${esc(m.nome)}</option>`).join('');
+  selM.disabled = false;
+}
+
+// ================================================================
+// UPLOAD E PARSE DO CSV
+// ================================================================
+function configurarUpload() {
+  const zone  = document.getElementById('upload-zone');
+  const input = document.getElementById('input-csv');
+
+  input.onchange = (e) => lerArquivo(e.target.files[0]);
+  zone.ondragover  = (e) => { e.preventDefault(); zone.classList.add('dragover'); };
+  zone.ondragleave = ()  => zone.classList.remove('dragover');
+  zone.ondrop = (e) => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f?.name.endsWith('.csv') || f?.type === 'text/csv') lerArquivo(f);
+    else mostrarAlerta('alerta-parse', 'Envie apenas arquivos .csv', 'erro');
+  };
+}
+
+function lerArquivo(file) {
+  if (!file) return;
+  arquivoCSV = file;
+  document.getElementById('arquivo-nome').textContent = file.name;
+  document.getElementById('arquivo-meta').textContent =
+    `${(file.size / 1024).toFixed(1)} KB`;
+  document.getElementById('arquivo-info').classList.add('visivel');
+  document.getElementById('alerta-parse').innerHTML = '';
+
+  const reader = new FileReader();
+  reader.onload = (e) => parsearCSV(e.target.result);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function removerArquivo() {
+  arquivoCSV = null;
+  cards = [];
+  document.getElementById('input-csv').value = '';
+  document.getElementById('arquivo-info').classList.remove('visivel');
+  document.getElementById('alerta-parse').innerHTML = '';
+}
+
+/**
+ * Parser de CSV robusto:
+ * - Suporta campos entre aspas com vírgulas e quebras de linha dentro
+ * - Suporta \n literal nos campos (converte para quebra real)
+ * - Ignora linhas vazias
+ */
+function parsearCSV(texto) {
+  // Normaliza quebras de linha
+  const conteudo = texto.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  const linhas = [];
+  let campo = '';
+  let dentroAspas = false;
+  let linha = [];
+
+  for (let i = 0; i < conteudo.length; i++) {
+    const c = conteudo[i];
+    const prox = conteudo[i + 1];
+
+    if (dentroAspas) {
+      if (c === '"' && prox === '"') {
+        // Aspas escapadas ("")
+        campo += '"';
+        i++;
+      } else if (c === '"') {
+        dentroAspas = false;
+      } else {
+        campo += c;
+      }
+    } else {
+      if (c === '"') {
+        dentroAspas = true;
+      } else if (c === ',') {
+        linha.push(campo.replace(/\\n/g, '\n'));
+        campo = '';
+      } else if (c === '\n') {
+        linha.push(campo.replace(/\\n/g, '\n'));
+        campo = '';
+        if (linha.some(f => f.trim())) linhas.push(linha);
+        linha = [];
+      } else {
+        campo += c;
+      }
+    }
+  }
+  // Última linha sem \n final
+  linha.push(campo.replace(/\\n/g, '\n'));
+  if (linha.some(f => f.trim())) linhas.push(linha);
+
+  // Remove cabeçalho se for "frente,verso"
+  let dados = linhas;
+  if (dados.length > 0) {
+    const prim = dados[0].map(f => f.trim().toLowerCase());
+    if (prim[0] === 'frente' && prim[1] === 'verso') dados = dados.slice(1);
+  }
+
+  // Monta cards
+  const erros = [];
+  cards = dados
+    .filter(l => l.length >= 2)
+    .map((l, i) => {
+      const frente = l[0]?.trim() || '';
+      const verso  = l[1]?.trim() || '';
+      const valido = frente.length > 0 && verso.length > 0;
+      if (!valido) erros.push(i + 1);
+      return { _id: i, _excluir: false, frente, verso, valido };
+    });
+
+  const total  = cards.length;
+  const validos = cards.filter(c => c.valido).length;
+
+  if (total === 0) {
+    mostrarAlerta('alerta-parse',
+      'Nenhuma questão encontrada no CSV. Verifique o formato do arquivo.', 'erro');
+    return;
+  }
+
+  let msg = `✅ ${validos} card${validos !== 1 ? 's' : ''} encontrado${validos !== 1 ? 's' : ''}.`;
+  if (erros.length) msg += ` ⚠️ ${erros.length} linha${erros.length > 1 ? 's' : ''} com campo vazio (serão ignoradas).`;
+  mostrarAlerta('alerta-parse', msg, erros.length ? 'aviso' : 'sucesso');
+}
+
+// ================================================================
+// NAVEGAÇÃO
+// ================================================================
+function irParaRevisao() {
+  const materiaId = document.getElementById('sel-materia').value;
+  if (!materiaId) { alert('Selecione uma matéria de destino.'); return; }
+  if (!arquivoCSV) { alert('Selecione um arquivo CSV.'); return; }
+  if (!cards.length) { alert('Nenhum card válido encontrado no CSV.'); return; }
+
+  irParaStep(2);
+  renderTabela();
+}
+
+function voltarConfig() { irParaStep(1); }
+
+function novaImportacao() {
+  removerArquivo();
+  cards = [];
+  pagAtual = 1;
+  irParaStep(1);
+}
+
+const SECOES = ['secao-config', 'secao-preview', 'secao-sucesso'];
+
+function irParaStep(n) {
+  SECOES.forEach((id, i) => {
+    document.getElementById(id).style.display = i === n - 1 ? 'block' : 'none';
+  });
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById(`step${i}-ind`);
+    el.className = 'step ' + (i < n ? 'concluido' : i === n ? 'ativo' : '');
+  }
+  document.getElementById('linha12').className = 'step-linha' + (n > 1 ? ' ativa' : '');
+  document.getElementById('linha23').className = 'step-linha' + (n > 2 ? ' ativa' : '');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ================================================================
+// TABELA DE REVISÃO
+// ================================================================
+function filtrar() {
+  pagAtual = 1;
+  renderTabela();
+}
+
+function renderTabela() {
+  const busca = document.getElementById('busca').value.toLowerCase();
+  cardsFiltrados = cards.filter(c => {
+    if (busca) {
+      const txt = (c.frente + ' ' + c.verso).toLowerCase();
+      if (!txt.includes(busca)) return false;
+    }
+    return true;
+  });
+
+  const total     = cardsFiltrados.length;
+  const totalPags = Math.max(1, Math.ceil(total / POR_PAG));
+  if (pagAtual > totalPags) pagAtual = totalPags;
+
+  const inicio = (pagAtual - 1) * POR_PAG;
+  const fatia  = cardsFiltrados.slice(inicio, inicio + POR_PAG);
+
+  document.getElementById('tbody').innerHTML = fatia.map((c, fi) => `
+    <tr id="tr-${c._id}" class="${!c.valido ? 'erro-linha' : ''}">
+      <td>
+        <input type="checkbox" ${c._excluir ? 'checked' : ''}
+          onchange="toggleCard(${c._id}, this.checked)" />
+      </td>
+      <td class="linha-num">${inicio + fi + 1}</td>
+      <td>
+        <textarea class="celula-edit" rows="3"
+          onchange="atualizarCard(${c._id}, 'frente', this.value)"
+        >${esc(c.frente)}</textarea>
+      </td>
+      <td>
+        <textarea class="celula-edit" rows="3"
+          onchange="atualizarCard(${c._id}, 'verso', this.value)"
+        >${esc(c.verso)}</textarea>
+      </td>
+      <td>
+        <button class="btn-del-linha" onclick="removerCard(${c._id})">✕</button>
+      </td>
+    </tr>
+  `).join('');
+
+  const ativos = cards.filter(c => !c._excluir).length;
+  document.getElementById('badge-total').textContent =
+    `${ativos} de ${cards.length} cards`;
+  document.getElementById('pag-info').textContent =
+    `${Math.min(inicio+1, total)}–${Math.min(inicio+POR_PAG, total)} de ${total}`;
+
+  renderPaginacao(totalPags);
+}
+
+function renderPaginacao(totalPags) {
+  const cont = document.getElementById('pag-btns');
+  let html = `<button class="btn-pag" onclick="irPag(${pagAtual-1})" ${pagAtual===1?'disabled':''}>‹</button>`;
+  for (let i = 1; i <= totalPags; i++) {
+    if (totalPags <= 7 || Math.abs(i-pagAtual) <= 2 || i === 1 || i === totalPags) {
+      html += `<button class="btn-pag ${i===pagAtual?'ativo':''}" onclick="irPag(${i})">${i}</button>`;
+    } else if (Math.abs(i-pagAtual) === 3) {
+      html += `<span style="padding:0 4px;color:var(--text3)">…</span>`;
+    }
+  }
+  html += `<button class="btn-pag" onclick="irPag(${pagAtual+1})" ${pagAtual===totalPags?'disabled':''}>›</button>`;
+  cont.innerHTML = html;
+}
+
+function irPag(n) {
+  const tp = Math.ceil(cardsFiltrados.length / POR_PAG);
+  if (n < 1 || n > tp) return;
+  pagAtual = n;
+  renderTabela();
+  document.getElementById('secao-preview').scrollIntoView({ behavior: 'smooth' });
+}
+
+function atualizarCard(id, campo, valor) {
+  const c = cards.find(x => x._id === id);
+  if (c) { c[campo] = valor; c.valido = c.frente.trim() && c.verso.trim(); }
+}
+
+function toggleCard(id, marcado) {
+  const c = cards.find(x => x._id === id);
+  if (c) c._excluir = marcado;
+  const ativos = cards.filter(c => !c._excluir).length;
+  document.getElementById('badge-total').textContent =
+    `${ativos} de ${cards.length} cards`;
+}
+
+function toggleTodos(cb) {
+  cardsFiltrados.forEach(c => { c._excluir = cb.checked; });
+  renderTabela();
+}
+
+function removerCard(id) {
+  cards = cards.filter(c => c._id !== id);
+  renderTabela();
+}
+
+function excluirMarcados() {
+  const qtd = cards.filter(c => c._excluir).length;
+  if (!qtd) { alert('Nenhum card selecionado.'); return; }
+  if (!confirm(`Remover ${qtd} card(s)?`)) return;
+  cards = cards.filter(c => !c._excluir);
+  renderTabela();
+}
+
+function adicionarLinha() {
+  const novoId = Date.now();
+  cards.unshift({ _id: novoId, _excluir: false, frente: '', verso: '', valido: false });
+  pagAtual = 1;
+  renderTabela();
+}
+
+// ================================================================
+// SALVAR NO SUPABASE
+// ================================================================
+async function salvarCards() {
+  const materiaId  = document.getElementById('sel-materia').value;
+  const paraSalvar = cards.filter(c => !c._excluir && c.frente?.trim() && c.verso?.trim());
+
+  if (!paraSalvar.length) {
+    mostrarAlerta('alerta-revisao',
+      'Nenhum card válido para salvar. Verifique se frente e verso estão preenchidos.', 'erro');
+    return;
+  }
+
+  const btn = document.getElementById('btn-salvar');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Salvando...';
+
+  try {
+    const agora    = new Date().toISOString();
+    const LOTE     = 100;
+    const registros = paraSalvar.map(c => ({
+      materia_id:    materiaId,
+      frente:        c.frente.trim(),
+      verso:         c.verso.trim(),
+      state:         'new',
+      repetitions:   0,
+      ease_factor:   2.5,
+      interval_days: 0,
+      learning_step: 0,
+      lapses:        0,
+      due_date:      agora,
+    }));
+
+    for (let i = 0; i < registros.length; i += LOTE) {
+      const { error } = await sb.from('cards').insert(registros.slice(i, i + LOTE));
+      if (error) throw new Error(error.message);
+    }
+
+    // Busca nome da matéria para exibir no sucesso
+    const { data: mat } = await sb.from('materias')
+      .select('nome').eq('id', materiaId).single();
+
+    document.getElementById('stat-total').textContent  = paraSalvar.length;
+    document.getElementById('stat-novos').textContent  = paraSalvar.length;
+    document.getElementById('stat-materia').textContent = mat?.nome || '—';
+    irParaStep(3);
+
+  } catch (err) {
+    mostrarAlerta('alerta-revisao', `Erro ao salvar: ${err.message}`, 'erro');
+    btn.disabled = false;
+    btn.innerHTML = '💾 Salvar cards';
+  }
+}
+
+// ================================================================
+// UTILITÁRIOS
+// ================================================================
+function mostrarAlerta(id, msg, tipo = 'info') {
+  const cls = {
+    erro:    'alerta-erro',
+    sucesso: 'alerta-sucesso',
+    info:    'alerta-info',
+    aviso:   'alerta-aviso',
+  };
+  document.getElementById(id).innerHTML =
+    `<div class="alerta ${cls[tipo] || 'alerta-info'}">${msg}</div>`;
+}
+
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
