@@ -159,6 +159,21 @@ body {
 .dot-orange { background: var(--orange); }
 .dot-green { background: var(--green); }
 
+/* Hamburguer mobile */
+.btn-menu-mobile {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-right: 4px;
+  border-radius: var(--r);
+  transition: background .1s, color .1s;
+}
+.btn-menu-mobile:hover { background: var(--bg3); color: var(--text); }
+
 /* ── SIDEBAR ─────────────────────────────────────── */
 .sidebar {
   background: var(--bg2);
@@ -212,6 +227,16 @@ body {
 .proj-tree-item:hover { background: var(--bg3); color: var(--text); }
 .proj-tree-item.active { color: var(--accent); background: var(--bg3); }
 .proj-tree-emoji { font-size: 13px; }
+
+/* ── SIDEBAR OVERLAY MOBILE ─────────────────────── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 150;
+}
+.sidebar-overlay.open { display: block; }
 
 /* ── MAIN ─────────────────────────────────────── */
 .main { overflow-y: auto; }
@@ -480,6 +505,8 @@ body {
   vertical-align: top;
 }
 .fc-table tr:hover td { background: var(--bg3); }
+/* ── LINHA DA TABELA CLICÁVEL ── */
+.fc-table tbody tr { cursor: pointer; }
 
 .state-badge {
   display: inline-block;
@@ -520,24 +547,36 @@ body {
 .study-progress-wrap { flex: 1; margin: 0 1.5rem; height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
 .study-progress-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
 
-/* card flip */
-.flip-scene {
+/* card flip — FIX: scroll em ambas as faces, giro bidirecional */
+.flip-scene-wrap {
   width: 100%;
   max-width: 720px;
-  height: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.flip-scene {
+  width: 100%;
+  flex: 1;
   min-height: 160px;
   perspective: 1200px;
   cursor: pointer;
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
 }
+
 .flip-card {
   width: 100%;
-  height: auto;
+  flex: 1;
   position: relative;
   transform-style: preserve-3d;
   transition: transform .45s cubic-bezier(.4,0,.2,1);
 }
 .flip-card.flipped { transform: rotateY(180deg); }
+
 .flip-face {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
@@ -550,18 +589,24 @@ body {
   padding: 1.75rem 2rem;
   gap: .75rem;
 }
+
+/* FIX: frente com scroll quando conteúdo longo */
+.flip-face.front {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .flip-face.back {
   position: absolute;
   inset: 0;
   transform: rotateY(180deg);
   border-color: var(--border2);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
-.flip-face.front {
-  min-height: 140px;
-}
-/* Garante que flip-card seja o contexto de posicionamento */
-.flip-card { position: relative; }
+
 .flip-face-label {
   font-family: var(--mono);
   font-size: 10px;
@@ -569,6 +614,7 @@ body {
   letter-spacing: .12em;
   color: var(--text3);
   align-self: flex-start;
+  flex-shrink: 0;
 }
 .flip-face-content {
   font-size: 15px;
@@ -582,10 +628,27 @@ body {
 }
 .flip-face-img { max-width: 100%; max-height: 260px; border-radius: 6px; object-fit: contain; align-self: center; margin-top: .5rem; }
 
-.flip-hint {
+/* indicador de lado — substitui o hint estático */
+.flip-side-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-family: var(--mono);
   font-size: 11px;
   color: var(--text3);
+  flex-shrink: 0;
+  user-select: none;
+}
+.flip-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: background .3s, transform .3s;
+}
+.flip-dot.active {
+  background: var(--accent);
+  transform: scale(1.3);
 }
 
 /* answer buttons */
@@ -679,6 +742,52 @@ body {
 .form-field textarea:focus { border-color: var(--accent); }
 .form-field select option { background: var(--bg3); }
 
+/* ── MODAL VISUALIZAR CARD ───────────────────────── */
+#modal-ver-card .modal {
+  max-width: 640px;
+}
+.ver-card-face {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.ver-card-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--text3);
+  margin-bottom: .5rem;
+}
+.ver-card-content {
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+.ver-card-img {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 6px;
+  object-fit: contain;
+  display: block;
+  margin-top: .75rem;
+}
+.ver-card-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: .75rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--border);
+}
+
 /* ── TOAST ─────────────────────────────────────── */
 #toast {
   position: fixed;
@@ -711,8 +820,34 @@ body {
 /* ── RESPONSIVE ─────────────────────────────────── */
 @media (max-width: 640px) {
   .shell { grid-template-columns: 1fr; }
-  .sidebar { display: none; }
+
+  /* Sidebar vira drawer deslizante */
+  .sidebar {
+    position: fixed;
+    top: 48px;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    z-index: 160;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    border-right: 1px solid var(--border2);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,.5);
+  }
+
+  .btn-menu-mobile { display: flex; }
+
   .stat-cards { grid-template-columns: 1fr 1fr; }
+
+  .topbar-stats { display: none; }
+
+  .page { padding: 1.25rem; }
+
+  .answer-btns { gap: .4rem; }
+  .answer-btn { padding: 10px 4px; font-size: 11px; }
 }
 
 /* ── LOADING ─────────────────────────────────────── */
@@ -822,6 +957,8 @@ body {
 
     <!-- TOPBAR -->
     <div class="topbar">
+      <!-- Hamburguer — só aparece no mobile -->
+      <button class="btn-menu-mobile" onclick="toggleSidebar()" id="btn-hamburger" aria-label="Menu">☰</button>
       <div class="topbar-logo">ConcursoCards</div>
       <div class="topbar-stats">
         <div class="stat-pill"><div class="dot dot-blue"></div>Novos <span id="top-new">0</span></div>
@@ -830,19 +967,22 @@ body {
       </div>
     </div>
 
+    <!-- Overlay escuro por trás do sidebar mobile -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="fecharSidebar()"></div>
+
     <!-- SIDEBAR -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
       <div class="nav-section-label">Menu</div>
-      <div class="nav-item active" data-page="dashboard" onclick="navTo('dashboard',this)">
+      <div class="nav-item active" data-page="dashboard" onclick="navTo('dashboard',this);fecharSidebar()">
         <span class="nav-icon">◈</span> Dashboard
       </div>
-      <div class="nav-item" data-page="study" onclick="iniciarEstudo()">
+      <div class="nav-item" data-page="study" onclick="iniciarEstudo();fecharSidebar()">
         <span class="nav-icon">▶</span> Estudar agora
       </div>
-      <div class="nav-item" data-page="agenda" onclick="navTo('agenda',this);carregarAgenda()">
+      <div class="nav-item" data-page="agenda" onclick="navTo('agenda',this);carregarAgenda();fecharSidebar()">
         <span class="nav-icon">◷</span> Agenda
       </div>
-      <div class="nav-item" data-page="rendimento" onclick="navTo('rendimento',this);carregarRendimento()">
+      <div class="nav-item" data-page="rendimento" onclick="navTo('rendimento',this);carregarRendimento();fecharSidebar()">
         <span class="nav-icon">◎</span> Rendimento
       </div>
       <div class="sidebar-divider"></div>
@@ -851,7 +991,7 @@ body {
         <div class="loading"><div class="spinner"></div></div>
       </div>
       <div class="sidebar-divider"></div>
-      <div class="nav-item" onclick="navTo('projetos', document.querySelector('[data-page=projetos]'))">
+      <div class="nav-item" onclick="navTo('projetos', document.querySelector('[data-page=projetos]'));fecharSidebar()">
         <span class="nav-icon">＋</span> Novo projeto
       </div>
     </div>
@@ -988,34 +1128,42 @@ body {
       <button class="btn btn-sm" style="margin-left:1rem;" onclick="encerrarEstudo()">✕ Sair</button>
     </div>
 
-    <div class="flip-scene" onclick="virarCard()" style="flex:1;min-height:0;display:flex;flex-direction:column;">
-      <div class="flip-card" id="flip-card" style="flex:1;min-height:160px;">
-        <div class="flip-face front">
-          <div class="flip-face-label">Frente</div>
-          <div class="flip-face-content" id="card-frente"></div>
-          <img id="card-frente-img" class="flip-face-img" style="display:none"/>
-        </div>
-        <div class="flip-face back">
-          <div class="flip-face-label">Verso</div>
-          <div class="flip-face-content" id="card-verso"></div>
-          <img id="card-verso-img" class="flip-face-img" style="display:none"/>
+    <!-- FIX: wrap com flex para conter a cena e scroll indicador -->
+    <div class="flip-scene-wrap" onclick="virarCard()">
+      <div class="flip-scene">
+        <div class="flip-card" id="flip-card">
+          <div class="flip-face front">
+            <div class="flip-face-label">Frente</div>
+            <div class="flip-face-content" id="card-frente"></div>
+            <img id="card-frente-img" class="flip-face-img" style="display:none"/>
+          </div>
+          <div class="flip-face back">
+            <div class="flip-face-label">Verso</div>
+            <div class="flip-face-content" id="card-verso"></div>
+            <img id="card-verso-img" class="flip-face-img" style="display:none"/>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="flip-hint" id="flip-hint" style="flex-shrink:0;text-align:center;">clique no card para revelar o verso · ou pressione Espaço</div>
+    <!-- Indicador de lado (substitui o hint estático) -->
+    <div class="flip-side-indicator" id="flip-side-indicator">
+      <div class="flip-dot active" id="dot-frente"></div>
+      <span id="flip-label-txt" style="font-size:11px;color:var(--text3);">clique para ver o verso · Espaço</span>
+      <div class="flip-dot" id="dot-verso"></div>
+    </div>
 
     <div class="answer-btns" id="answer-btns" style="display:none;flex-shrink:0;">
-      <button class="answer-btn ab-errei"   onclick="responder('errei')">
+      <button class="answer-btn ab-errei"   onclick="event.stopPropagation();responder('errei')">
         <span>Errei</span><span class="ab-key">1</span>
       </button>
-      <button class="answer-btn ab-dificil" onclick="responder('dificil')">
+      <button class="answer-btn ab-dificil" onclick="event.stopPropagation();responder('dificil')">
         <span>Difícil</span><span class="ab-key">2</span>
       </button>
-      <button class="answer-btn ab-bom"     onclick="responder('bom')">
+      <button class="answer-btn ab-bom"     onclick="event.stopPropagation();responder('bom')">
         <span>Bom</span><span class="ab-key">3</span>
       </button>
-      <button class="answer-btn ab-facil"   onclick="responder('facil')">
+      <button class="answer-btn ab-facil"   onclick="event.stopPropagation();responder('facil')">
         <span>Fácil</span><span class="ab-key">4</span>
       </button>
     </div>
@@ -1150,6 +1298,27 @@ body {
   </div>
 </div>
 
+<!-- ── MODAL VISUALIZAR CARD ──────────────────────── -->
+<div class="modal-overlay" id="modal-ver-card">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-title" id="ver-card-titulo">Card</div>
+    <div class="ver-card-face">
+      <div class="ver-card-label">🃏 Frente</div>
+      <div class="ver-card-content" id="ver-frente"></div>
+      <img id="ver-frente-img" class="ver-card-img" style="display:none"/>
+    </div>
+    <div class="ver-card-face" style="border-color:var(--border2);">
+      <div class="ver-card-label">✓ Verso (gabarito)</div>
+      <div class="ver-card-content" id="ver-verso"></div>
+      <img id="ver-verso-img" class="ver-card-img" style="display:none"/>
+    </div>
+    <div class="ver-card-meta" id="ver-card-meta"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-ver-card')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -1178,7 +1347,6 @@ async function conectar() {
   if (!url || !key) { toast('Preencha URL e Anon Key'); return; }
   try {
     sb = supabase.createClient(url, key);
-    // testa conexão
     const { error } = await sb.from('projetos').select('id').limit(1);
     if (error) throw error;
     localStorage.setItem('cc_url', url);
@@ -1197,7 +1365,6 @@ async function init() {
   initPasteAreas();
 }
 
-// Auto-conectar se houver credenciais salvas
 window.addEventListener('DOMContentLoaded', () => {
   const url = localStorage.getItem('cc_url');
   const key = localStorage.getItem('cc_key');
@@ -1207,6 +1374,27 @@ window.addEventListener('DOMContentLoaded', () => {
     conectar();
   }
 });
+
+// ================================================================
+// SIDEBAR MOBILE — DRAWER
+// ================================================================
+function toggleSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('sidebar-overlay');
+  const isOpen   = sidebar.classList.contains('open');
+  if (isOpen) {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+  } else {
+    sidebar.classList.add('open');
+    overlay.classList.add('open');
+  }
+}
+
+function fecharSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
 
 // ================================================================
 // NAVEGAÇÃO
@@ -1222,7 +1410,6 @@ function navTo(page, el) {
 // DASHBOARD
 // ================================================================
 async function carregarDashboard() {
-  // Conta cards por estado
   const { data } = await sb.from('cards').select('state, due_date');
   const hoje = new Date();
   let novos = 0, learning = 0, review = 0, paraHoje = 0;
@@ -1239,7 +1426,6 @@ async function carregarDashboard() {
   document.getElementById('top-learning').textContent = learning;
   document.getElementById('top-review').textContent = review;
 
-  // Lista projetos
   const { data: projs } = await sb.from('projetos').select('*').order('criado_em');
   state.projetos = projs || [];
   renderProjetosGrid('dash-projetos', state.projetos);
@@ -1272,7 +1458,7 @@ async function renderSidebarProjetos() {
   const el = document.getElementById('sidebar-projetos');
   if (!data?.length) { el.innerHTML = '<div style="padding:.5rem 1.25rem;font-size:12px;color:var(--text3)">Nenhum projeto</div>'; return; }
   el.innerHTML = data.map(p => `
-    <div class="proj-tree-item" onclick="abrirProjeto('${p.id}')">
+    <div class="proj-tree-item" onclick="abrirProjeto('${p.id}');fecharSidebar()">
       <span class="proj-tree-emoji">${p.emoji||'📁'}</span>${esc(p.nome)}
     </div>
   `).join('');
@@ -1280,7 +1466,6 @@ async function renderSidebarProjetos() {
 
 async function abrirProjeto(id) {
   state.currentProjeto = state.projetos.find(p => p.id === id);
-  // carrega cadernos
   const { data } = await sb.from('cadernos').select('*').eq('projeto_id', id).order('criado_em');
   state.cadernos = data || [];
   document.getElementById('cadernos-title').textContent = `${state.currentProjeto?.emoji||''} ${state.currentProjeto?.nome}`;
@@ -1345,16 +1530,45 @@ async function abrirMateria(id) {
     tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-icon">🃏</div><div class="empty-title">Nenhum card</div><div>Crie seu primeiro card</div></div></td></tr>`;
   } else {
     tbody.innerHTML = data.map(c => `
-      <tr>
+      <tr onclick="abrirVerCard(${JSON.stringify(c).replace(/"/g,'&quot;')})" title="Clique para ver o card completo">
         <td>${esc(c.frente.substring(0,60))}${c.frente.length>60?'…':''}</td>
         <td>${esc(c.verso.substring(0,60))}${c.verso.length>60?'…':''}</td>
         <td><span class="state-badge state-${c.state}">${estadoLabel(c.state)}</span></td>
         <td style="font-family:var(--mono);font-size:11px;color:var(--text3)">${fmtDate(c.due_date)}</td>
-        <td><button class="btn btn-sm btn-danger" onclick="deletar('cards','${c.id}',()=>abrirMateria('${id}'))">✕</button></td>
+        <td><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletar('cards','${c.id}',()=>abrirMateria('${id}'))">✕</button></td>
       </tr>
     `).join('');
   }
   navTo('cards', null);
+}
+
+// ================================================================
+// VISUALIZAR CARD COMPLETO
+// ================================================================
+function abrirVerCard(card) {
+  document.getElementById('ver-card-titulo').textContent =
+    `${state.currentMateria?.emoji||'🃏'} Card`;
+
+  document.getElementById('ver-frente').textContent = card.frente || '';
+  const fi = document.getElementById('ver-frente-img');
+  fi.style.display = card.frente_image_url ? '' : 'none';
+  if (card.frente_image_url) fi.src = card.frente_image_url;
+
+  document.getElementById('ver-verso').textContent = card.verso || '';
+  const vi = document.getElementById('ver-verso-img');
+  vi.style.display = card.verso_image_url ? '' : 'none';
+  if (card.verso_image_url) vi.src = card.verso_image_url;
+
+  const ef  = parseFloat(card.ease_factor || 2.5).toFixed(2);
+  const ivl = card.interval_days > 0 ? `${Math.ceil(card.interval_days)}d` : '—';
+  document.getElementById('ver-card-meta').innerHTML =
+    `<span>Estado: <strong style="color:var(--text)">${estadoLabel(card.state)}</strong></span>` +
+    `<span>EF: <strong style="color:var(--text)">${ef}</strong></span>` +
+    `<span>Intervalo: <strong style="color:var(--text)">${ivl}</strong></span>` +
+    `<span>Revisões: <strong style="color:var(--text)">${card.total_reviews||0}</strong></span>` +
+    `<span>Próx. revisão: <strong style="color:var(--text)">${fmtDate(card.due_date)}</strong></span>`;
+
+  document.getElementById('modal-ver-card').classList.add('open');
 }
 
 // ================================================================
@@ -1504,7 +1718,6 @@ async function deletar(tabela, id, callback) {
 // MODALS
 // ================================================================
 async function showModal(id) {
-  // Preenche selects antes de abrir
   if (id === 'modal-caderno') {
     const { data } = await sb.from('projetos').select('id,nome').order('nome');
     document.getElementById('cad-projeto-id').innerHTML =
@@ -1528,7 +1741,6 @@ async function showModal(id) {
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-// Fecha modal clicando fora
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
@@ -1575,7 +1787,7 @@ function mostrarCardAtual() {
   cardVirado = false;
 
   document.getElementById('flip-card').classList.remove('flipped');
-  document.getElementById('flip-hint').style.display = '';
+  atualizarIndicador(false);
   document.getElementById('answer-btns').style.display = 'none';
 
   document.getElementById('card-frente').textContent = card.frente;
@@ -1588,26 +1800,41 @@ function mostrarCardAtual() {
   if (card.frente_image_url) fi.src = card.frente_image_url;
   if (card.verso_image_url)  vi.src = card.verso_image_url;
 
-  // progresso
   const pct = Math.round((estudoIndex / estudoTotal) * 100);
   document.getElementById('study-progress').style.width = pct + '%';
   document.getElementById('study-count').textContent = `${estudoIndex+1} / ${estudoTotal}`;
   document.getElementById('study-ctx').textContent = `${card.state === 'new' ? '🆕' : card.state === 'learning' ? '📖' : '🔄'} ${card.state}`;
 }
 
+/* FIX 1: virar para ambos os lados — remove o guard "if (cardVirado) return" */
 function virarCard() {
-  if (cardVirado) return;
-  cardVirado = true;
-  document.getElementById('flip-card').classList.add('flipped');
-  document.getElementById('flip-hint').style.display = 'none';
-  document.getElementById('answer-btns').style.display = 'flex';
+  cardVirado = !cardVirado;
+
+  const flipCard = document.getElementById('flip-card');
+  if (cardVirado) {
+    flipCard.classList.add('flipped');
+  } else {
+    flipCard.classList.remove('flipped');
+  }
+
+  atualizarIndicador(cardVirado);
+
+  // Botões de resposta só aparecem quando o verso está visível
+  document.getElementById('answer-btns').style.display = cardVirado ? 'flex' : 'none';
+}
+
+function atualizarIndicador(virado) {
+  document.getElementById('dot-frente').classList.toggle('active', !virado);
+  document.getElementById('dot-verso').classList.toggle('active',  virado);
+  document.getElementById('flip-label-txt').textContent = virado
+    ? 'clique para voltar à frente · Espaço'
+    : 'clique para ver o verso · Espaço';
 }
 
 async function responder(resp) {
   const card = estudoQueue[estudoIndex];
   const resultado = sm2Calcular(card, resp);
 
-  // Atualiza no banco
   const { error } = await sb.from('cards').update({
     state:         resultado.state,
     repetitions:   resultado.repetitions,
@@ -1620,7 +1847,6 @@ async function responder(resp) {
   }).eq('id', card.id);
 
   if (!error) {
-    // Registra histórico
     await sb.from('revisoes').insert({
       card_id:            card.id,
       resposta:           resp,
@@ -1634,7 +1860,6 @@ async function responder(resp) {
     });
   }
 
-  // Se errou em learning ou new, re-insere no final da fila
   if (resp === 'errei' && card.state !== 'review') {
     estudoQueue.push({ ...card, ...resultado, due_date: resultado.proxima_revisao.toISOString() });
   }
@@ -1725,7 +1950,8 @@ function fuzz(ivl) {
 document.addEventListener('keydown', e => {
   if (document.getElementById('study-screen').style.display !== 'flex') return;
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if (e.key === ' ' || e.key === 'Enter') { virarCard(); return; }
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); virarCard(); return; }
+  // Só aceita resposta quando o verso está visível
   if (!cardVirado) return;
   const map = { '1': 'errei', '2': 'dificil', '3': 'bom', '4': 'facil' };
   if (map[e.key]) responder(map[e.key]);
@@ -1762,17 +1988,15 @@ function toast(msg, dur = 2500) {
 }
 
 // ================================================================
-// ESTUDO FILTRADO (stat cards clicáveis)
+// ESTUDO FILTRADO
 // ================================================================
 async function iniciarEstudoFiltrado(filtro) {
   const hoje = new Date();
   let query = sb.from('cards').select('*');
 
   if (filtro === 'hoje') {
-    // Só os disponíveis agora
     query = query.lte('due_date', hoje.toISOString()).order('due_date').limit(50);
   } else if (filtro === 'learning') {
-    // Aprendendo — vai para agenda mostrando só esses
     navTo('agenda', document.querySelector('[data-page=agenda]'));
     await carregarAgenda('learning');
     return;
@@ -1816,7 +2040,6 @@ async function carregarAgenda(filtroEstado = null) {
   const hoje = new Date();
   hoje.setHours(0,0,0,0);
 
-  // Agrupa por dia
   const grupos = {};
   data.forEach(c => {
     const due = new Date(c.due_date);
@@ -1856,7 +2079,7 @@ async function carregarAgenda(filtroEstado = null) {
       </div>`;
 
     cards.forEach(c => {
-      const stateLabel = { new: 'Novo', learning: 'Aprendendo', review: 'Revisão' }[c.state] || c.state;
+      const stateLabel2 = { new: 'Novo', learning: 'Aprendendo', review: 'Revisão' }[c.state] || c.state;
       const stateClass = { new: 'state-new', learning: 'state-learning', review: 'state-review' }[c.state] || '';
       const ef = parseFloat(c.ease_factor || 2.5).toFixed(1);
       const ivl = c.interval_days > 0 ? `ivl: ${Math.ceil(c.interval_days)}d` : '';
@@ -1864,7 +2087,7 @@ async function carregarAgenda(filtroEstado = null) {
       const frenteShort = (c.frente || '').substring(0, 70) + ((c.frente || '').length > 70 ? '…' : '');
 
       html += `<div class="agenda-row">
-        <span class="agenda-state"><span class="state-badge ${stateClass}">${stateLabel}</span></span>
+        <span class="agenda-state"><span class="state-badge ${stateClass}">${stateLabel2}</span></span>
         <span class="agenda-text">${esc(frenteShort)}</span>
         <span class="agenda-time" title="EF: ${ef}${ivl ? ' · ' + ivl : ''}">${diffDias <= 0 ? hora : ''} EF ${ef}${ivl ? ' · '+ivl : ''}</span>
       </div>`;
@@ -1921,7 +2144,6 @@ async function carregarRendimento() {
     ds.setDate(ds.getDate() - 1);
   }
 
-  // Heatmap 16 semanas organizado em colunas
   const WEEKS = 16;
   const contDia = {};
   r.forEach(x => {
@@ -1980,7 +2202,6 @@ async function carregarRendimento() {
     'Menos <div class="heat-cell"></div><div class="heat-cell h1"></div><div class="heat-cell h2"></div><div class="heat-cell h3"></div><div class="heat-cell h4"></div> Mais' +
     '</div>';
 
-  // EF buckets
   const efBuckets = [
     { label:'1.3 – 1.7', min:1.3, max:1.7, count:0, color:'var(--red)' },
     { label:'1.7 – 2.1', min:1.7, max:2.1, count:0, color:'var(--orange)' },
@@ -2000,7 +2221,6 @@ async function carregarRendimento() {
   const distLabels = { errei:'Errei', dificil:'Difícil', bom:'Bom', facil:'Fácil' };
   const maxDist = Math.max(1, ...Object.values(dist));
 
-  // Ring SVG
   const R = 36, CX = 44, CY = 44;
   const circ = +(2 * Math.PI * R).toFixed(2);
   const fill  = +(circ * taxa / 100).toFixed(2);
@@ -2009,10 +2229,8 @@ async function carregarRendimento() {
   const pct = p => totalCards ? Math.round(p/totalCards*100) : 0;
 
   el.innerHTML =
-    // KPI row
     '<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:.75rem;margin-bottom:1.5rem;">' +
 
-    // Ring
     '<div class="rend-kpi" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.25rem 1.75rem;gap:.25rem;">' +
     '<div class="rend-kpi-label" style="text-align:center;">Taxa de acerto</div>' +
     '<svg width="88" height="88" viewBox="0 0 88 88">' +
@@ -2026,7 +2244,6 @@ async function carregarRendimento() {
     '<div class="rend-kpi-sub" style="text-align:center;">' + acertos + ' de ' + total + ' revisões</div>' +
     '</div>' +
 
-    // Streak
     '<div class="rend-kpi" style="display:flex;flex-direction:column;justify-content:space-between;">' +
     '<div class="rend-kpi-label">🔥 Streak</div>' +
     '<div class="rend-kpi-val" style="color:var(--accent);font-size:42px;">' + streak + '</div>' +
@@ -2035,7 +2252,6 @@ async function carregarRendimento() {
     '<div style="width:' + Math.min(100,streak*10) + '%;height:100%;background:var(--accent);border-radius:2px;"></div>' +
     '</div></div>' +
 
-    // EF Médio
     '<div class="rend-kpi" style="display:flex;flex-direction:column;justify-content:space-between;">' +
     '<div class="rend-kpi-label">Ease Factor médio</div>' +
     '<div class="rend-kpi-val" style="color:var(--blue);font-size:42px;">' + efMedio + '</div>' +
@@ -2044,7 +2260,6 @@ async function carregarRendimento() {
     '<div style="width:' + Math.min(100, Math.round(((parseFloat(efMedio)-1.3)/(3.0-1.3))*100)) + '%;height:100%;background:var(--blue);border-radius:2px;"></div>' +
     '</div></div>' +
 
-    // Baralho
     '<div class="rend-kpi" style="display:flex;flex-direction:column;gap:.4rem;">' +
     '<div class="rend-kpi-label">Baralho — ' + totalCards + ' cards</div>' +
     ['new','learning','review'].map((st,i) => {
@@ -2063,18 +2278,15 @@ async function carregarRendimento() {
     '<div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:.25rem;">' +
     totalLapses + ' lapso' + (totalLapses!==1?'s':'') + ' acumulado' + (totalLapses!==1?'s':'') + '</div>' +
     '</div>' +
-    '</div>' + // end KPI row
+    '</div>' +
 
-    // Heatmap
     '<div class="rend-heat-wrap">' +
     '<div class="rend-section-title">Atividade — últimas ' + WEEKS + ' semanas</div>' +
     heatHtml +
     '</div>' +
 
-    // Bottom 2 cols
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">' +
 
-    // Dist respostas
     '<div class="rend-heat-wrap" style="margin-bottom:0;">' +
     '<div class="rend-section-title">Distribuição de respostas</div>' +
     '<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;">' +
@@ -2090,7 +2302,6 @@ async function carregarRendimento() {
     ).join('') +
     '</div></div>' +
 
-    // EF dist
     '<div class="rend-heat-wrap" style="margin-bottom:0;">' +
     '<div class="rend-section-title">Distribuição de Ease Factor</div>' +
     '<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;">' +
@@ -2106,9 +2317,8 @@ async function carregarRendimento() {
     '<div style="margin-top:.5rem;font-size:10px;color:var(--text3);font-family:var(--mono);">Cards com EF abaixo de 2.0 precisam de mais atenção</div>' +
     '</div></div>' +
 
-    '</div>'; // end bottom row
+    '</div>';
 }
-
 </script>
 </body>
 </html>
