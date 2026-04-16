@@ -601,15 +601,15 @@ thead input[type="checkbox"] {
             <div class="stat-card-num c-blue" id="dash-hoje">—</div>
             <div class="stat-card-hint">clique para estudar</div>
           </div>
-          <div class="stat-card stat-card-clickable" onclick="iniciarEstudoFiltrado('learning')">
+          <div class="stat-card stat-card-clickable" onclick="iniciarEstudoPorEstado('learning')">
             <div class="stat-card-label">Em aprendizado ▶</div>
             <div class="stat-card-num c-orange" id="dash-learning">—</div>
-            <div class="stat-card-hint">clique para ver agenda</div>
+            <div class="stat-card-hint">clique para estudar</div>
           </div>
-          <div class="stat-card stat-card-clickable" onclick="iniciarEstudoFiltrado('review')">
+          <div class="stat-card stat-card-clickable" onclick="iniciarEstudoPorEstado('review')">
             <div class="stat-card-label">Em revisão ▶</div>
             <div class="stat-card-num c-green" id="dash-review">—</div>
-            <div class="stat-card-hint">clique para ver agenda</div>
+            <div class="stat-card-hint">clique para estudar</div>
           </div>
         </div>
         <div class="page-header" style="margin-top:1rem;">
@@ -1634,10 +1634,9 @@ async function iniciarEstudoFiltrado(filtro) {
 async function iniciarEstudoPorEstado(estado) {
   const { data } = await sb.from('cards').select('*')
     .eq('state', estado)
-    .lte('due_date', new Date().toISOString())
     .order('due_date').limit(50);
   const label = estado==='learning' ? 'aprendizado' : 'revisão';
-  if (!data?.length) { toast(`Nenhum card de ${label} para agora 🎉`); return; }
+  if (!data?.length) { toast(`Nenhum card de ${label} 🎉`); return; }
   estudoQueue=data; estudoIndex=0; estudoTotal=data.length;
   document.getElementById('study-active').style.display='flex';
   document.getElementById('study-done').style.display='none';
