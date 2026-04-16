@@ -133,7 +133,6 @@ body {
 .proj-tree-item.active { color: var(--accent); background: var(--bg3); }
 .proj-tree-emoji { font-size: 13px; }
 
-/* Sidebar overlay mobile */
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 150; }
 .sidebar-overlay.open { display: block; }
 
@@ -154,6 +153,7 @@ body {
   transition: background .1s, border-color .1s; white-space: nowrap;
 }
 .btn:hover { background: var(--bg4); border-color: var(--text3); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
 .btn-accent { background: var(--accent); border-color: var(--accent); color: #0f0f0f; font-weight: 500; }
 .btn-accent:hover { background: var(--accent2); border-color: var(--accent2); }
 .btn-danger { border-color: var(--red); color: var(--red); }
@@ -234,7 +234,7 @@ body {
 .bib-count {
   font-family: var(--mono); font-size: 11px; color: var(--text3);
   padding: 4px 10px; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: 20px; white-space: nowrap;
 }
 
 .bib-table { width: 100%; border-collapse: collapse; }
@@ -250,6 +250,9 @@ body {
 }
 .bib-table tbody tr { cursor: pointer; transition: background .1s; }
 .bib-table tbody tr:hover td { background: var(--bg3); }
+/* linha selecionada */
+.bib-table tbody tr.bib-row-sel td { background: rgba(212,168,67,.07); }
+.bib-table tbody tr.bib-row-sel:hover td { background: rgba(212,168,67,.12); }
 
 .bib-loc {
   display: flex; flex-direction: column; gap: 1px;
@@ -273,6 +276,31 @@ body {
 .btn-pag:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .btn-pag.ativo { background: var(--accent); border-color: var(--accent); color: #0f0f0f; }
 .btn-pag:disabled { opacity: .3; cursor: not-allowed; }
+
+/* checkbox */
+.bib-table input[type="checkbox"],
+thead input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 14px; height: 14px; cursor: pointer;
+}
+
+/* barra de seleção flutuante */
+.bib-sel-bar {
+  display: none;
+  align-items: center;
+  gap: .75rem;
+  background: var(--bg4);
+  border: 1px solid var(--accent);
+  border-radius: var(--r2);
+  padding: .6rem 1rem;
+  margin-bottom: 1rem;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text2);
+}
+.bib-sel-bar.visivel { display: flex; }
+.bib-sel-bar-txt { flex: 1; }
+.bib-sel-bar-txt strong { color: var(--accent); }
 
 /* ── RENDIMENTO ──────────────────── */
 .rend-kpi { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2); padding: 1.25rem; }
@@ -397,7 +425,6 @@ body {
 .ver-card-img { max-width: 100%; max-height: 240px; border-radius: 6px; object-fit: contain; display: block; margin-top: .75rem; }
 .ver-card-meta { display: flex; gap: 1rem; flex-wrap: wrap; font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--border); }
 
-/* Migrar card — seletor de destino */
 .migrar-path {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem;
 }
@@ -628,8 +655,13 @@ body {
       <!-- BIBLIOTECA -->
       <div class="page" id="page-biblioteca">
         <div class="page-header">
-          <div><div class="page-title">Biblioteca</div><div class="page-subtitle">todos os cards — busca, edição e migração</div></div>
+          <div>
+            <div class="page-title">Biblioteca de cards</div>
+            <div class="page-subtitle">todos os cards — busca, edição e migração</div>
+          </div>
         </div>
+
+        <!-- Filtros -->
         <div class="bib-filters">
           <input class="bib-search" id="bib-search" placeholder="🔍  Buscar em frente ou verso..." oninput="bibFiltrar()"/>
           <select class="bib-select" id="bib-proj" onchange="bibCarregarCadernos();bibFiltrar()">
@@ -647,8 +679,24 @@ body {
             <option value="learning">Aprendendo</option>
             <option value="review">Revisão</option>
           </select>
+          <select class="bib-select" id="bib-ordem" onchange="bibFiltrar()">
+            <option value="criado_desc">Mais recentes primeiro</option>
+            <option value="criado_asc">Mais antigos primeiro</option>
+            <option value="due_asc">Próx. revisão ↑</option>
+            <option value="due_desc">Próx. revisão ↓</option>
+            <option value="ef_asc">Ease Factor ↑</option>
+            <option value="ef_desc">Ease Factor ↓</option>
+          </select>
           <span class="bib-count" id="bib-count">—</span>
         </div>
+
+        <!-- Barra de seleção -->
+        <div class="bib-sel-bar" id="bib-sel-bar">
+          <span class="bib-sel-bar-txt"><strong id="bib-sel-count">0</strong> card(s) selecionado(s)</span>
+          <button class="btn btn-sm" onclick="bibLimparSelecao()">Limpar seleção</button>
+          <button class="btn btn-sm btn-danger" onclick="bibExcluirSelecionados()">🗑 Excluir selecionados</button>
+        </div>
+
         <div id="bib-table-wrap">
           <div class="loading"><div class="spinner"></div> Carregando...</div>
         </div>
@@ -789,8 +837,6 @@ body {
 <div class="modal-overlay" id="modal-ver-card">
   <div class="modal modal-lg">
     <div class="modal-title" id="ver-card-titulo">Card</div>
-
-    <!-- Modo visualização -->
     <div id="ver-modo-view">
       <div class="ver-card-face">
         <div class="ver-card-label">🃏 Frente</div>
@@ -809,8 +855,6 @@ body {
         <button class="btn btn-accent" onclick="entrarModoEdit()">✎ Editar</button>
       </div>
     </div>
-
-    <!-- Modo edição -->
     <div id="ver-modo-edit" style="display:none">
       <div class="form-field"><label>Frente</label><textarea id="edit-frente" rows="4"></textarea></div>
       <div class="form-field"><label>Verso</label><textarea id="edit-verso" rows="4"></textarea></div>
@@ -884,7 +928,7 @@ let sb = null;
 let state = {
   projetos: [], cadernos: [], materias: [],
   currentProjeto: null, currentCaderno: null, currentMateria: null,
-  cardAtual: null, // card aberto no modal
+  cardAtual: null,
 };
 
 // SM-2
@@ -893,9 +937,10 @@ const LEARNING_STEPS = [1, 10, 1440];
 const GRADUATING_INTERVAL = 1, EASY_INTERVAL = 4;
 
 // Biblioteca
-let bibTodos = [];        // todos os cards + localização
-let bibFiltrados = [];    // após filtros
-let bibPagAtual = 1;
+let bibTodos      = [];   // todos os cards + localização
+let bibFiltrados  = [];   // após filtros/ordenação
+let bibPagAtual   = 1;
+let bibSelecionados = new Set(); // ids selecionados
 const BIB_POR_PAG = 30;
 
 // ================================================================
@@ -1136,10 +1181,8 @@ async function salvarEdicaoCard() {
   state.cardAtual.verso  = verso;
   toast('Card atualizado ✓');
   sairModoEdit();
-  // Atualiza a visualização
   document.getElementById('ver-frente').textContent = frente;
   document.getElementById('ver-verso').textContent  = verso;
-  // Recarrega biblioteca se estiver aberta
   if (document.getElementById('page-biblioteca').classList.contains('active')) {
     await carregarBibliotecaDados();
     bibFiltrar();
@@ -1151,7 +1194,6 @@ async function salvarEdicaoCard() {
 // ================================================================
 async function abrirMigrarCard() {
   closeModal('modal-ver-card');
-  // Preenche projetos
   const { data: projs } = await sb.from('projetos').select('id,nome,emoji').order('nome');
   const sel = document.getElementById('mig-card-proj');
   sel.innerHTML = '<option value="">— Projeto —</option>' +
@@ -1192,8 +1234,8 @@ async function migCardCarregarMaterias() {
     (data||[]).map(m => `<option value="${m.id}">${m.emoji||''} ${esc(m.nome)}</option>`).join('');
   selM.disabled = false;
   selM.onchange = () => {
-    const matNome = selM.options[selM.selectedIndex]?.text || '—';
-    const cadNome = document.getElementById('mig-card-cad').options[document.getElementById('mig-card-cad').selectedIndex]?.text || '—';
+    const matNome  = selM.options[selM.selectedIndex]?.text || '—';
+    const cadNome  = document.getElementById('mig-card-cad').options[document.getElementById('mig-card-cad').selectedIndex]?.text || '—';
     const projNome = document.getElementById('mig-card-proj').options[document.getElementById('mig-card-proj').selectedIndex]?.text || '—';
     if (selM.value) {
       const prev = document.getElementById('mig-card-preview');
@@ -1210,7 +1252,6 @@ async function confirmarMigrarCard() {
   if (error) { toast('Erro: ' + error.message); return; }
   toast('Card migrado com sucesso ✓');
   closeModal('modal-migrar-card');
-  // Recarrega visualizações se abertas
   if (state.currentMateria) abrirMateria(state.currentMateria.id);
   if (document.getElementById('page-biblioteca').classList.contains('active')) {
     await carregarBibliotecaDados(); bibFiltrar();
@@ -1251,7 +1292,6 @@ async function confirmarMigrarCaderno() {
   if (error) { toast('Erro: ' + error.message); return; }
   toast('Caderno migrado com sucesso ✓');
   closeModal('modal-migrar-caderno');
-  // Volta para o projeto atual (que agora não tem mais esse caderno)
   abrirProjeto(state.currentProjeto.id);
   await renderSidebarProjetos();
 }
@@ -1544,7 +1584,7 @@ async function iniciarEstudoFiltrado(filtro) {
 }
 
 // ================================================================
-// AGENDA (com cards clicáveis)
+// AGENDA
 // ================================================================
 async function carregarAgenda(filtroEstado = null) {
   const el = document.getElementById('agenda-container');
@@ -1602,7 +1642,6 @@ async function carregarAgenda(filtroEstado = null) {
       const ivl = c.interval_days>0 ? `ivl: ${Math.ceil(c.interval_days)}d` : '';
       const hora = new Date(c.due_date).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
       const frenteShort = (c.frente||'').substring(0,70)+((c.frente||'').length>70?'…':'');
-      // serializa o card para passar ao onclick
       const cardJson = esc(JSON.stringify(c));
 
       html += `<div class="agenda-row" onclick="abrirVerCard(JSON.parse(this.dataset.card))" data-card="${cardJson}">
@@ -1619,7 +1658,7 @@ async function carregarAgenda(filtroEstado = null) {
 }
 
 // ================================================================
-// BIBLIOTECA — listagem + edição + migração
+// BIBLIOTECA — listagem + filtros + ordenação + seleção múltipla
 // ================================================================
 async function carregarBiblioteca() {
   await carregarBibliotecaDados();
@@ -1628,22 +1667,21 @@ async function carregarBiblioteca() {
 }
 
 async function carregarBibliotecaDados() {
-  // Busca todos os cards com join completo
   const { data, error } = await sb
     .from('cards')
     .select(`
       id, frente, verso, state, due_date, interval_days, ease_factor,
-      repetitions, lapses, total_reviews, learning_step,
+      repetitions, lapses, total_reviews, learning_step, criado_em,
       frente_image_url, verso_image_url, materia_id,
       materias ( id, nome, emoji,
         cadernos ( id, nome, emoji,
           projetos ( id, nome, emoji )
         )
       )
-    `)
-    .order('criado_em', { ascending: false });
+    `);
 
   if (error) { toast('Erro ao carregar biblioteca: ' + error.message); return; }
+
   bibTodos = (data || []).map(c => ({
     ...c,
     _matNome:  c.materias?.nome  || '—',
@@ -1656,7 +1694,6 @@ async function carregarBibliotecaDados() {
 }
 
 async function bibPreencherFiltros() {
-  // Projetos
   const projs = [...new Map(bibTodos.map(c => [c._projId, {id:c._projId, nome:c._projNome}])).values()].filter(p=>p.id);
   const selP = document.getElementById('bib-proj');
   selP.innerHTML = '<option value="">Todos os projetos</option>' +
@@ -1684,18 +1721,20 @@ async function bibCarregarMaterias() {
     mats.map(m=>`<option value="${m.id}">${esc(m.nome)}</option>`).join('');
 }
 
+// ── Filtrar + ordenar ─────────────────────────────
 function bibFiltrar() {
   const busca  = document.getElementById('bib-search').value.toLowerCase();
   const projId = document.getElementById('bib-proj').value;
   const cadId  = document.getElementById('bib-cad').value;
   const matId  = document.getElementById('bib-mat').value;
-  const state  = document.getElementById('bib-state').value;
+  const stateF = document.getElementById('bib-state').value;
+  const ordem  = document.getElementById('bib-ordem').value;
 
   bibFiltrados = bibTodos.filter(c => {
     if (projId && c._projId !== projId) return false;
     if (cadId  && c._cadId  !== cadId)  return false;
     if (matId  && c._matId  !== matId)  return false;
-    if (state  && c.state   !== state)  return false;
+    if (stateF && c.state   !== stateF) return false;
     if (busca) {
       const txt = (c.frente+' '+c.verso).toLowerCase();
       if (!txt.includes(busca)) return false;
@@ -1703,11 +1742,92 @@ function bibFiltrar() {
     return true;
   });
 
+  // Ordenação client-side
+  bibFiltrados.sort((a, b) => {
+    switch (ordem) {
+      case 'criado_asc':  return new Date(a.criado_em||0) - new Date(b.criado_em||0);
+      case 'due_asc':     return new Date(a.due_date||0)  - new Date(b.due_date||0);
+      case 'due_desc':    return new Date(b.due_date||0)  - new Date(a.due_date||0);
+      case 'ef_asc':      return parseFloat(a.ease_factor||2.5) - parseFloat(b.ease_factor||2.5);
+      case 'ef_desc':     return parseFloat(b.ease_factor||2.5) - parseFloat(a.ease_factor||2.5);
+      default:            return new Date(b.criado_em||0) - new Date(a.criado_em||0); // criado_desc
+    }
+  });
+
   bibPagAtual = 1;
   document.getElementById('bib-count').textContent = `${bibFiltrados.length} cards`;
   bibRenderTabela();
 }
 
+// ── Seleção múltipla ──────────────────────────────
+function bibAtualizarBarraSel() {
+  const n   = bibSelecionados.size;
+  const bar = document.getElementById('bib-sel-bar');
+  bar.classList.toggle('visivel', n > 0);
+  document.getElementById('bib-sel-count').textContent = n;
+}
+
+function bibToggleSelecionado(id, checked) {
+  if (checked) bibSelecionados.add(id);
+  else bibSelecionados.delete(id);
+  bibAtualizarBarraSel();
+  // Atualiza estado indeterminate do checkbox "todos"
+  const total   = document.querySelectorAll('.bib-chk-row').length;
+  const marcados = document.querySelectorAll('.bib-chk-row:checked').length;
+  const chkTodos = document.getElementById('bib-chk-todos');
+  if (chkTodos) {
+    chkTodos.indeterminate = marcados > 0 && marcados < total;
+    chkTodos.checked = total > 0 && marcados === total;
+  }
+  // Destaque visual da linha
+  const tr = document.querySelector(`tr[data-id="${id}"]`);
+  if (tr) tr.classList.toggle('bib-row-sel', checked);
+}
+
+function bibToggleTodos(checked) {
+  document.querySelectorAll('.bib-chk-row').forEach(cb => {
+    cb.checked = checked;
+    if (checked) bibSelecionados.add(cb.dataset.id);
+    else bibSelecionados.delete(cb.dataset.id);
+    const tr = cb.closest('tr');
+    if (tr) tr.classList.toggle('bib-row-sel', checked);
+  });
+  bibAtualizarBarraSel();
+}
+
+function bibLimparSelecao() {
+  bibSelecionados.clear();
+  bibRenderTabela(); // re-render para desmarcar tudo
+  bibAtualizarBarraSel();
+}
+
+async function bibExcluirSelecionados() {
+  const ids = [...bibSelecionados];
+  if (!ids.length) return;
+  if (!confirm(`Excluir ${ids.length} card(s) permanentemente? Esta ação não pode ser desfeita.`)) return;
+
+  const bar = document.getElementById('bib-sel-bar');
+  bar.innerHTML = `<span class="bib-sel-bar-txt"><div class="spinner" style="display:inline-block"></div> Excluindo ${ids.length} cards...</span>`;
+
+  try {
+    // Exclui em lotes de 50 para não estourar limites da URL
+    for (let i = 0; i < ids.length; i += 50) {
+      const lote = ids.slice(i, i + 50);
+      const { error } = await sb.from('cards').delete().in('id', lote);
+      if (error) throw error;
+    }
+    toast(`${ids.length} card(s) excluído(s) ✓`);
+    bibTodos = bibTodos.filter(c => !bibSelecionados.has(c.id));
+    bibSelecionados.clear();
+    bibFiltrar();
+  } catch(e) {
+    toast('Erro ao excluir: ' + e.message);
+    // Restaura barra
+    bibAtualizarBarraSel();
+  }
+}
+
+// ── Renderização da tabela ────────────────────────
 function bibRenderTabela() {
   const total  = bibFiltrados.length;
   const pages  = Math.max(1, Math.ceil(total / BIB_POR_PAG));
@@ -1721,39 +1841,52 @@ function bibRenderTabela() {
     return;
   }
 
-  const rows = slice.map((c, i) => {
+  const todosNaPagSel  = slice.length > 0 && slice.every(c => bibSelecionados.has(c.id));
+  const algunsNaPagSel = slice.some(c => bibSelecionados.has(c.id));
+
+  const rows = slice.map(c => {
     const stateClass = { new:'state-new', learning:'state-learning', review:'state-review' }[c.state]||'';
-    const ef  = parseFloat(c.ease_factor||2.5).toFixed(1);
+    const ef          = parseFloat(c.ease_factor||2.5).toFixed(1);
     const frenteShort = (c.frente||'').substring(0,70)+((c.frente||'').length>70?'…':'');
     const versoShort  = (c.verso||'').substring(0,50)+((c.verso||'').length>50?'…':'');
-    const cardJson = esc(JSON.stringify(c));
-    return `<tr onclick="abrirVerCard(JSON.parse(this.dataset.card))" data-card="${cardJson}" title="Clique para abrir">
-      <td>
+    const cardJson    = esc(JSON.stringify(c));
+    const isSel       = bibSelecionados.has(c.id);
+    return `<tr data-id="${c.id}" data-card="${cardJson}" class="${isSel?'bib-row-sel':''}" title="Clique para abrir">
+      <td onclick="event.stopPropagation()" style="width:36px;text-align:center;padding-right:0;">
+        <input type="checkbox" class="bib-chk-row" data-id="${c.id}"
+          ${isSel?'checked':''}
+          onchange="bibToggleSelecionado('${c.id}', this.checked)"/>
+      </td>
+      <td onclick="abrirVerCard(JSON.parse(this.closest('tr').dataset.card))">
         <div class="bib-loc">
           <div class="bib-loc-proj">${esc(c._projNome)} › ${esc(c._cadNome)}</div>
           <div class="bib-loc-mat">${esc(c._matNome)}</div>
         </div>
       </td>
-      <td style="color:var(--text);max-width:260px;">${esc(frenteShort)}</td>
-      <td style="color:var(--text2);max-width:200px;">${esc(versoShort)}</td>
-      <td><span class="state-badge ${stateClass}">${estadoLabel(c.state)}</span></td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--text3);">${ef}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--text3);">${fmtDate(c.due_date)}</td>
+      <td onclick="abrirVerCard(JSON.parse(this.closest('tr').dataset.card))" style="color:var(--text);max-width:260px;">${esc(frenteShort)}</td>
+      <td onclick="abrirVerCard(JSON.parse(this.closest('tr').dataset.card))" style="color:var(--text2);max-width:200px;">${esc(versoShort)}</td>
+      <td onclick="abrirVerCard(JSON.parse(this.closest('tr').dataset.card))"><span class="state-badge ${stateClass}">${estadoLabel(c.state)}</span></td>
+      <td onclick="abrirVerCard(JSON.parse(this.closest('tr').dataset.card))" style="font-family:var(--mono);font-size:11px;color:var(--text3);">${ef}</td>
+      <td onclick="abrirVerCard(JSON.parse(this.closest('tr').dataset.card))" style="font-family:var(--mono);font-size:11px;color:var(--text3);">${fmtDate(c.due_date)}</td>
       <td>
         <div class="bib-actions">
           <button class="btn btn-sm btn-purple" onclick="event.stopPropagation();abrirMigrarCardPorObj(JSON.parse(this.closest('tr').dataset.card))" title="Migrar">↗</button>
-          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();bibDeletar(this)" data-id="${c.id}" title="Excluir">✕</button>
+          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();bibDeletar('${c.id}')" title="Excluir">✕</button>
         </div>
       </td>
     </tr>`;
   }).join('');
 
-  const pagHtml = bibRenderPag(pages);
-
   document.getElementById('bib-table-wrap').innerHTML = `
-    <div class="tabela-wrap" style="border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;">
+    <div style="border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;">
       <table class="bib-table">
         <thead><tr>
+          <th style="width:36px;text-align:center;padding-right:0;">
+            <input type="checkbox" id="bib-chk-todos"
+              ${todosNaPagSel?'checked':''}
+              onchange="bibToggleTodos(this.checked)"
+              title="Selecionar/desmarcar todos desta página"/>
+          </th>
           <th>Localização</th>
           <th>Frente</th>
           <th>Verso</th>
@@ -1767,8 +1900,15 @@ function bibRenderTabela() {
     </div>
     <div class="bib-pag">
       <span>${start+1}–${Math.min(start+BIB_POR_PAG,total)} de ${total}</span>
-      <div class="bib-pag-btns">${pagHtml}</div>
+      <div class="bib-pag-btns">${bibRenderPag(pages)}</div>
     </div>`;
+
+  // Estado indeterminate após render
+  const chkTodos = document.getElementById('bib-chk-todos');
+  if (chkTodos && algunsNaPagSel && !todosNaPagSel) chkTodos.indeterminate = true;
+
+  // Mantém barra de seleção atualizada
+  bibAtualizarBarraSel();
 }
 
 function bibRenderPag(pages) {
@@ -1792,24 +1932,23 @@ function bibIrPag(n) {
   document.getElementById('page-biblioteca').scrollIntoView({ behavior:'smooth' });
 }
 
-async function bibDeletar(btn) {
-  const id = btn.dataset.id;
+async function bibDeletar(id) {
   if (!confirm('Excluir este card permanentemente?')) return;
   const { error } = await sb.from('cards').delete().eq('id', id);
   if (error) { toast('Erro: ' + error.message); return; }
   toast('Card excluído ✓');
   bibTodos = bibTodos.filter(c => c.id !== id);
+  bibSelecionados.delete(id);
   bibFiltrar();
 }
 
-// Abre modal de migração direto pelo objeto (botão na tabela)
 async function abrirMigrarCardPorObj(card) {
   state.cardAtual = card;
   await abrirMigrarCard();
 }
 
 // ================================================================
-// AGENDA / RENDIMENTO
+// RENDIMENTO
 // ================================================================
 async function carregarRendimento() {
   const el = document.getElementById('rendimento-container');
