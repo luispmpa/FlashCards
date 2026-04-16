@@ -188,6 +188,28 @@ body {
 .stat-card-clickable:hover { border-color: var(--border2); background: var(--bg3); }
 .stat-card-hint { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: .25rem; }
 
+/* ── ESTUDAR PICKER ─────────────────────────────── */
+.estudar-picker {
+  position: fixed;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  padding: .35rem 0;
+  z-index: 300;
+  min-width: 230px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.6);
+}
+.estudar-picker-opt {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .55rem 1rem;
+  cursor: pointer; font-size: 13px; color: var(--text2);
+  transition: background .1s, color .1s;
+}
+.estudar-picker-opt:hover { background: var(--bg3); color: var(--text); }
+.estudar-picker-opt-label { flex: 1; }
+.estudar-picker-opt-count { font-family: var(--mono); font-size: 11px; }
+.estudar-picker-divider { height: 1px; background: var(--border); margin: .25rem 0; }
+
 /* ── AGENDA ──────────────────────── */
 .agenda-group { margin-bottom: 1.75rem; }
 .agenda-day-label {
@@ -541,7 +563,7 @@ thead input[type="checkbox"] {
       <div class="nav-item active" data-page="dashboard" onclick="navTo('dashboard',this);fecharSidebar()">
         <span class="nav-icon">◈</span> Dashboard
       </div>
-      <div class="nav-item" data-page="study" onclick="iniciarEstudo();fecharSidebar()">
+      <div class="nav-item" data-page="study" onclick="abrirEstudarPicker(event);fecharSidebar()">
         <span class="nav-icon">▶</span> Estudar agora
       </div>
       <div class="nav-item" data-page="agenda" onclick="navTo('agenda',this);carregarAgenda();fecharSidebar()">
@@ -571,7 +593,7 @@ thead input[type="checkbox"] {
       <div class="page active" id="page-dashboard">
         <div class="page-header">
           <div><div class="page-title">Dashboard</div><div class="page-subtitle">visão geral do seu estudo</div></div>
-          <button class="btn btn-accent" onclick="iniciarEstudo()">▶ Estudar agora</button>
+          <button class="btn btn-accent" onclick="abrirEstudarPicker(event)">▶ Estudar agora ▾</button>
         </div>
         <div class="stat-cards">
           <div class="stat-card stat-card-clickable" onclick="iniciarEstudoFiltrado('hoje')">
@@ -648,6 +670,11 @@ thead input[type="checkbox"] {
       <div class="page" id="page-agenda">
         <div class="page-header">
           <div><div class="page-title">Agenda</div><div class="page-subtitle">próximas revisões agendadas</div></div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <button class="btn" style="font-size:11px;color:var(--blue);border-color:var(--blue);" onclick="iniciarEstudoFiltrado('hoje')">▶ Estudar hoje</button>
+            <button class="btn" style="font-size:11px;color:var(--orange);border-color:var(--orange);" onclick="iniciarEstudoPorEstado('learning')">▶ Aprendizado</button>
+            <button class="btn" style="font-size:11px;color:var(--green);border-color:var(--green);" onclick="iniciarEstudoPorEstado('review')">▶ Revisão</button>
+          </div>
         </div>
         <div id="agenda-container"></div>
       </div>
@@ -1569,13 +1596,48 @@ document.addEventListener('keydown', e => {
 });
 
 // ================================================================
+// ESTUDAR PICKER
+// ================================================================
+function abrirEstudarPicker(evt) {
+  evt.stopPropagation();
+  const picker = document.getElementById('estudar-picker');
+  if (picker.style.display !== 'none') { fecharEstudarPicker(); return; }
+  const rect = evt.currentTarget.getBoundingClientRect();
+  picker.style.top  = (rect.bottom + 6) + 'px';
+  const left = Math.min(rect.left, window.innerWidth - 240);
+  picker.style.left = Math.max(8, left) + 'px';
+  picker.style.display = 'block';
+  document.getElementById('picker-hoje').textContent     = document.getElementById('dash-hoje').textContent;
+  document.getElementById('picker-learning').textContent = document.getElementById('dash-learning').textContent;
+  document.getElementById('picker-review').textContent   = document.getElementById('dash-review').textContent;
+}
+function fecharEstudarPicker() {
+  document.getElementById('estudar-picker').style.display = 'none';
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#estudar-picker')) fecharEstudarPicker();
+});
+
+// ================================================================
 // ESTUDO FILTRADO
 // ================================================================
 async function iniciarEstudoFiltrado(filtro) {
-  if (filtro==='learning') { navTo('agenda',document.querySelector('[data-page=agenda]')); await carregarAgenda('learning'); return; }
-  if (filtro==='review')   { navTo('agenda',document.querySelector('[data-page=agenda]')); await carregarAgenda('review');   return; }
   const { data } = await sb.from('cards').select('*').lte('due_date',new Date().toISOString()).order('due_date').limit(50);
   if (!data?.length) { toast('Nenhum card disponível agora 🎉'); return; }
+  estudoQueue=data; estudoIndex=0; estudoTotal=data.length;
+  document.getElementById('study-active').style.display='flex';
+  document.getElementById('study-done').style.display='none';
+  document.getElementById('study-screen').style.display='flex';
+  mostrarCardAtual();
+}
+
+async function iniciarEstudoPorEstado(estado) {
+  const { data } = await sb.from('cards').select('*')
+    .eq('state', estado)
+    .lte('due_date', new Date().toISOString())
+    .order('due_date').limit(50);
+  const label = estado==='learning' ? 'aprendizado' : 'revisão';
+  if (!data?.length) { toast(`Nenhum card de ${label} para agora 🎉`); return; }
   estudoQueue=data; estudoIndex=0; estudoTotal=data.length;
   document.getElementById('study-active').style.display='flex';
   document.getElementById('study-done').style.display='none';
@@ -2043,5 +2105,25 @@ function toast(msg, dur=2500) {
   setTimeout(()=>el.classList.remove('show'),dur);
 }
 </script>
+
+<!-- ESTUDAR PICKER -->
+<div id="estudar-picker" class="estudar-picker" style="display:none;">
+  <div class="estudar-picker-opt" onclick="fecharEstudarPicker();iniciarEstudoFiltrado('hoje')">
+    <span style="color:var(--blue)">▶</span>
+    <span class="estudar-picker-opt-label">Para estudar hoje</span>
+    <span class="estudar-picker-opt-count" style="color:var(--blue)" id="picker-hoje">—</span>
+  </div>
+  <div class="estudar-picker-divider"></div>
+  <div class="estudar-picker-opt" onclick="fecharEstudarPicker();iniciarEstudoPorEstado('learning')">
+    <span style="color:var(--orange)">▶</span>
+    <span class="estudar-picker-opt-label">Em aprendizado</span>
+    <span class="estudar-picker-opt-count" style="color:var(--orange)" id="picker-learning">—</span>
+  </div>
+  <div class="estudar-picker-opt" onclick="fecharEstudarPicker();iniciarEstudoPorEstado('review')">
+    <span style="color:var(--green)">▶</span>
+    <span class="estudar-picker-opt-label">Em revisão</span>
+    <span class="estudar-picker-opt-count" style="color:var(--green)" id="picker-review">—</span>
+  </div>
+</div>
 </body>
 </html>
