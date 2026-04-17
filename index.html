@@ -1190,6 +1190,7 @@ async function abrirProjeto(id) {
       <div class="proj-dash-total-label">cards no projeto</div>
       <div class="proj-dash-pills">${badgesOf(novosProj, learningProj, reviewProj)}</div>
     </div>
+    <button class="btn btn-accent" style="margin-left:auto;align-self:center" onclick="iniciarEstudoContexto('projeto','${id}')">▶ Estudar projeto</button>
   </div>`;
 
   cadernos.forEach(cad => {
@@ -1208,7 +1209,8 @@ async function abrirProjeto(id) {
         <span class="proj-caderno-hdr-name">${esc(cad.nome)}</span>
         <span class="proj-caderno-hdr-count">${cadTotal} cards</span>
         <span class="proj-caderno-hdr-badges">${badgesOf(cadN,cadL,cadR)}</span>
-        <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="event.stopPropagation();deletar('cadernos','${cad.id}',()=>abrirProjeto('${id}'))">✕</button>
+        <button class="btn btn-sm btn-accent" style="margin-left:auto" onclick="event.stopPropagation();iniciarEstudoContexto('caderno','${cad.id}')">▶ Estudar</button>
+        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletar('cadernos','${cad.id}',()=>abrirProjeto('${id}'))">✕</button>
       </div>`;
 
     if (mats.length) {
@@ -1223,6 +1225,7 @@ async function abrirProjeto(id) {
           <span class="proj-mat-name">${esc(mat.nome)}</span>
           <span class="proj-mat-count">${mT} cards</span>
           <span class="proj-mat-badges">${badgesOf(mN,mL,mR)}</span>
+          <button class="btn btn-sm btn-accent" onclick="event.stopPropagation();iniciarEstudoContexto('materia','${mat.id}')">▶ Estudar</button>
           <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletar('materias','${mat.id}',()=>abrirProjeto('${id}'))">✕</button>
         </div>`;
       });
@@ -1288,6 +1291,28 @@ async function abrirMateriaDeProjeto(materiaId, cadernoId) {
   state.currentCaderno = state.cadernos.find(c => c.id === cadernoId);
   state.materias = state.currentCaderno?.materias || [];
   await abrirMateria(materiaId);
+}
+
+async function iniciarEstudoContexto(tipo, id) {
+  let materiaIds = [];
+  if (tipo === 'materia') {
+    materiaIds = [id];
+  } else if (tipo === 'caderno') {
+    const cad = state.cadernos.find(c => c.id === id);
+    materiaIds = (cad?.materias || []).map(m => m.id);
+  } else if (tipo === 'projeto') {
+    state.cadernos.forEach(cad => (cad.materias || []).forEach(m => materiaIds.push(m.id)));
+  }
+  if (!materiaIds.length) { toast('Nenhuma matéria encontrada'); return; }
+  const { data } = await sb.from('cards').select('*')
+    .in('materia_id', materiaIds)
+    .order('due_date').limit(100);
+  if (!data?.length) { toast('Nenhum card encontrado 🎉'); return; }
+  estudoQueue = data; estudoIndex = 0; estudoTotal = data.length;
+  document.getElementById('study-active').style.display = 'flex';
+  document.getElementById('study-done').style.display   = 'none';
+  document.getElementById('study-screen').style.display = 'flex';
+  mostrarCardAtual();
 }
 
 // ================================================================
