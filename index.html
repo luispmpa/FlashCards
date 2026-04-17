@@ -210,6 +210,42 @@ body {
 .estudar-picker-opt-count { font-family: var(--mono); font-size: 11px; }
 .estudar-picker-divider { height: 1px; background: var(--border); margin: .25rem 0; }
 
+/* ── PROJETO DASHBOARD ───────────────────────────── */
+.proj-dash-summary {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2);
+  padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+  display: flex; align-items: center; gap: 1.5rem;
+}
+.proj-dash-total-num { font-family: var(--mono); font-size: 36px; font-weight: 500; line-height: 1; }
+.proj-dash-total-label { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: .2rem; }
+.proj-dash-pills { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .6rem; }
+
+.proj-caderno-block {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2);
+  margin-bottom: .75rem; overflow: hidden;
+}
+.proj-caderno-hdr {
+  display: flex; align-items: center; gap: .65rem; padding: .8rem 1.25rem;
+  cursor: pointer; transition: background .1s; user-select: none;
+}
+.proj-caderno-hdr:hover { background: var(--bg3); }
+.proj-caderno-hdr-name { font-size: 14px; font-weight: 500; flex: 1; }
+.proj-caderno-hdr-count { font-family: var(--mono); font-size: 12px; color: var(--text3); white-space: nowrap; margin-right: .25rem; }
+.proj-caderno-hdr-badges { display: flex; gap: 3px; }
+
+.proj-mat-row {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .55rem 1.25rem .55rem 3.25rem;
+  cursor: pointer; font-size: 13px;
+  border-top: 1px solid var(--border);
+  transition: background .1s;
+}
+.proj-mat-row:hover { background: var(--bg3); }
+.proj-mat-name { flex: 1; color: var(--text2); }
+.proj-mat-count { font-family: var(--mono); font-size: 11px; color: var(--text3); white-space: nowrap; margin-right: .25rem; }
+.proj-mat-badges { display: flex; gap: 3px; }
+.proj-no-mat { padding: .5rem 1.25rem .5rem 3.25rem; font-size: 12px; color: var(--text3); border-top: 1px solid var(--border); }
+
 /* ── AGENDA ──────────────────────── */
 .agenda-group { margin-bottom: 1.75rem; }
 .agenda-day-label {
@@ -626,6 +662,19 @@ thead input[type="checkbox"] {
           <button class="btn btn-accent" onclick="showModal('modal-projeto')">+ Novo projeto</button>
         </div>
         <div id="projetos-list" class="grid-2"></div>
+      </div>
+
+      <!-- PROJETO DASHBOARD -->
+      <div class="page" id="page-projeto">
+        <div class="breadcrumb" id="bc-projeto"></div>
+        <div class="page-header">
+          <div>
+            <div class="page-title" id="projeto-title"></div>
+            <div class="page-subtitle" id="projeto-subtitle"></div>
+          </div>
+          <button class="btn btn-accent" onclick="showModal('modal-caderno')">+ Novo caderno</button>
+        </div>
+        <div id="projeto-container"></div>
       </div>
 
       <!-- CADERNOS -->
@@ -1088,26 +1137,103 @@ async function renderSidebarProjetos() {
 
 async function abrirProjeto(id) {
   state.currentProjeto = state.projetos.find(p => p.id === id);
-  const { data } = await sb.from('cadernos').select('*').eq('projeto_id', id).order('criado_em');
-  state.cadernos = data || [];
-  document.getElementById('cadernos-title').textContent = `${state.currentProjeto?.emoji||''} ${state.currentProjeto?.nome}`;
-  document.getElementById('bc-cadernos').innerHTML =
+  const proj = state.currentProjeto;
+
+  // One query: cadernos → materias → card state counts
+  const { data: cadernos } = await sb.from('cadernos')
+    .select('id, nome, emoji, criado_em, materias(id, nome, emoji, cards(id, state))')
+    .eq('projeto_id', id)
+    .order('criado_em');
+
+  // Store cadernos in state with stripped card data (only id/nome/emoji per matéria needed)
+  state.cadernos = (cadernos || []).map(c => ({
+    ...c,
+    materias: (c.materias || []).map(m => ({ id: m.id, nome: m.nome, emoji: m.emoji }))
+  }));
+
+  document.getElementById('projeto-title').textContent = `${proj?.emoji||''} ${proj?.nome||''}`;
+  document.getElementById('bc-projeto').innerHTML =
     `<a onclick="navTo('dashboard',document.querySelector('[data-page=dashboard]'))">Dashboard</a>
-     <span class="breadcrumb-sep">›</span> ${esc(state.currentProjeto?.nome)}`;
-  const el = document.getElementById('cadernos-list');
-  if (!data?.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">📓</div><div class="empty-title">Nenhum caderno</div></div>`;
-  } else {
-    el.innerHTML = data.map(c => `
-      <div class="card-item" onclick="abrirCaderno('${c.id}')">
-        <div class="card-item-actions">
-          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletar('cadernos','${c.id}',()=>abrirProjeto('${id}'))">✕</button>
-        </div>
-        <div class="card-item-emoji">${c.emoji||'📓'}</div>
-        <div class="card-item-name">${esc(c.nome)}</div>
-      </div>`).join('');
+     <span class="breadcrumb-sep">›</span> ${esc(proj?.nome||'')}`;
+
+  const el = document.getElementById('projeto-container');
+
+  if (!cadernos?.length) {
+    document.getElementById('projeto-subtitle').textContent = '0 cards';
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📓</div><div class="empty-title">Nenhum caderno</div><div style="font-size:13px;color:var(--text3);margin-top:.5rem;">Crie um caderno para organizar suas matérias</div></div>`;
+    navTo('projeto', null);
+    return;
   }
-  navTo('cadernos', null);
+
+  // Compute project-level totals
+  let totalProj = 0, novosProj = 0, learningProj = 0, reviewProj = 0;
+  (cadernos).forEach(cad => (cad.materias||[]).forEach(mat =>
+    (mat.cards||[]).forEach(card => {
+      totalProj++;
+      if (card.state==='new') novosProj++;
+      else if (card.state==='learning') learningProj++;
+      else if (card.state==='review') reviewProj++;
+    })
+  ));
+
+  document.getElementById('projeto-subtitle').textContent = `${totalProj} cards`;
+
+  const badgesOf = (n, l, r) => [
+    n ? `<span class="state-badge state-new">${n} novos</span>` : '',
+    l ? `<span class="state-badge state-learning">${l} aprendendo</span>` : '',
+    r ? `<span class="state-badge state-review">${r} revisão</span>` : '',
+  ].join('');
+
+  let html = `<div class="proj-dash-summary">
+    <div>
+      <div class="proj-dash-total-num">${totalProj}</div>
+      <div class="proj-dash-total-label">cards no projeto</div>
+      <div class="proj-dash-pills">${badgesOf(novosProj, learningProj, reviewProj)}</div>
+    </div>
+  </div>`;
+
+  cadernos.forEach(cad => {
+    const mats = cad.materias || [];
+    let cadTotal = 0, cadN = 0, cadL = 0, cadR = 0;
+    mats.forEach(mat => (mat.cards||[]).forEach(c => {
+      cadTotal++;
+      if (c.state==='new') cadN++;
+      else if (c.state==='learning') cadL++;
+      else if (c.state==='review') cadR++;
+    }));
+
+    html += `<div class="proj-caderno-block">
+      <div class="proj-caderno-hdr" onclick="abrirCaderno('${cad.id}')">
+        <span style="font-size:18px">${cad.emoji||'📓'}</span>
+        <span class="proj-caderno-hdr-name">${esc(cad.nome)}</span>
+        <span class="proj-caderno-hdr-count">${cadTotal} cards</span>
+        <span class="proj-caderno-hdr-badges">${badgesOf(cadN,cadL,cadR)}</span>
+        <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="event.stopPropagation();deletar('cadernos','${cad.id}',()=>abrirProjeto('${id}'))">✕</button>
+      </div>`;
+
+    if (mats.length) {
+      mats.forEach(mat => {
+        const cards = mat.cards || [];
+        const mT = cards.length;
+        const mN = cards.filter(c=>c.state==='new').length;
+        const mL = cards.filter(c=>c.state==='learning').length;
+        const mR = cards.filter(c=>c.state==='review').length;
+        html += `<div class="proj-mat-row" onclick="abrirMateriaDeProjeto('${mat.id}','${cad.id}')">
+          <span style="font-size:14px">${mat.emoji||'📄'}</span>
+          <span class="proj-mat-name">${esc(mat.nome)}</span>
+          <span class="proj-mat-count">${mT} cards</span>
+          <span class="proj-mat-badges">${badgesOf(mN,mL,mR)}</span>
+          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletar('materias','${mat.id}',()=>abrirProjeto('${id}'))">✕</button>
+        </div>`;
+      });
+    } else {
+      html += `<div class="proj-no-mat">Nenhuma matéria neste caderno</div>`;
+    }
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
+  navTo('projeto', null);
 }
 
 async function abrirCaderno(id) {
@@ -1156,6 +1282,12 @@ async function abrirMateria(id) {
       </tr>`).join('');
   }
   navTo('cards', null);
+}
+
+async function abrirMateriaDeProjeto(materiaId, cadernoId) {
+  state.currentCaderno = state.cadernos.find(c => c.id === cadernoId);
+  state.materias = state.currentCaderno?.materias || [];
+  await abrirMateria(materiaId);
 }
 
 // ================================================================
