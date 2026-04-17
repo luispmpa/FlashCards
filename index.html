@@ -1190,7 +1190,7 @@ async function abrirProjeto(id) {
       <div class="proj-dash-total-label">cards no projeto</div>
       <div class="proj-dash-pills">${badgesOf(novosProj, learningProj, reviewProj)}</div>
     </div>
-    <button class="btn btn-accent" style="margin-left:auto;align-self:center" onclick="iniciarEstudoContexto('projeto','${id}')">▶ Estudar projeto</button>
+    <button class="btn btn-accent" style="margin-left:auto;align-self:center" onclick="abrirContextoPicker(event,'projeto','${id}',${novosProj},${learningProj},${reviewProj})">▶ Estudar projeto ▾</button>
   </div>`;
 
   cadernos.forEach(cad => {
@@ -1209,7 +1209,7 @@ async function abrirProjeto(id) {
         <span class="proj-caderno-hdr-name">${esc(cad.nome)}</span>
         <span class="proj-caderno-hdr-count">${cadTotal} cards</span>
         <span class="proj-caderno-hdr-badges">${badgesOf(cadN,cadL,cadR)}</span>
-        <button class="btn btn-sm btn-accent" style="margin-left:auto" onclick="event.stopPropagation();iniciarEstudoContexto('caderno','${cad.id}')">▶ Estudar</button>
+        <button class="btn btn-sm btn-accent" style="margin-left:auto" onclick="event.stopPropagation();abrirContextoPicker(event,'caderno','${cad.id}',${cadN},${cadL},${cadR})">▶ Estudar ▾</button>
         <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletar('cadernos','${cad.id}',()=>abrirProjeto('${id}'))">✕</button>
       </div>`;
 
@@ -1225,7 +1225,7 @@ async function abrirProjeto(id) {
           <span class="proj-mat-name">${esc(mat.nome)}</span>
           <span class="proj-mat-count">${mT} cards</span>
           <span class="proj-mat-badges">${badgesOf(mN,mL,mR)}</span>
-          <button class="btn btn-sm btn-accent" onclick="event.stopPropagation();iniciarEstudoContexto('materia','${mat.id}')">▶ Estudar</button>
+          <button class="btn btn-sm btn-accent" onclick="event.stopPropagation();abrirContextoPicker(event,'materia','${mat.id}',${mN},${mL},${mR})">▶ Estudar ▾</button>
           <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletar('materias','${mat.id}',()=>abrirProjeto('${id}'))">✕</button>
         </div>`;
       });
@@ -1293,7 +1293,7 @@ async function abrirMateriaDeProjeto(materiaId, cadernoId) {
   await abrirMateria(materiaId);
 }
 
-async function iniciarEstudoContexto(tipo, id) {
+async function iniciarEstudoContexto(tipo, id, estado) {
   let materiaIds = [];
   if (tipo === 'materia') {
     materiaIds = [id];
@@ -1304,10 +1304,14 @@ async function iniciarEstudoContexto(tipo, id) {
     state.cadernos.forEach(cad => (cad.materias || []).forEach(m => materiaIds.push(m.id)));
   }
   if (!materiaIds.length) { toast('Nenhuma matéria encontrada'); return; }
-  const { data } = await sb.from('cards').select('*')
-    .in('materia_id', materiaIds)
-    .order('due_date').limit(100);
-  if (!data?.length) { toast('Nenhum card encontrado 🎉'); return; }
+  let query = sb.from('cards').select('*').in('materia_id', materiaIds);
+  if (estado) query = query.eq('state', estado);
+  const { data } = await query.order('due_date').limit(100);
+  if (!data?.length) {
+    const lbl = {new:'novos', learning:'aprendendo', review:'revisão'}[estado] || '';
+    toast(`Nenhum card${lbl ? ' ' + lbl : ''} encontrado 🎉`);
+    return;
+  }
   estudoQueue = data; estudoIndex = 0; estudoTotal = data.length;
   document.getElementById('study-active').style.display = 'flex';
   document.getElementById('study-done').style.display   = 'none';
@@ -1755,18 +1759,65 @@ document.addEventListener('keydown', e => {
 // ================================================================
 // ESTUDAR PICKER
 // ================================================================
-function abrirEstudarPicker(evt) {
-  evt.stopPropagation();
+function _posicionarPicker(evt) {
   const picker = document.getElementById('estudar-picker');
-  if (picker.style.display !== 'none') { fecharEstudarPicker(); return; }
   const rect = evt.currentTarget.getBoundingClientRect();
   picker.style.top  = (rect.bottom + 6) + 'px';
   const left = Math.min(rect.left, window.innerWidth - 240);
   picker.style.left = Math.max(8, left) + 'px';
   picker.style.display = 'block';
+}
+function abrirEstudarPicker(evt) {
+  evt.stopPropagation();
+  const picker = document.getElementById('estudar-picker');
+  if (picker.style.display !== 'none' && picker.dataset.mode === 'global') { fecharEstudarPicker(); return; }
+  picker.dataset.mode = 'global';
+  picker.innerHTML = `
+    <div class="estudar-picker-opt" onclick="fecharEstudarPicker();iniciarEstudoFiltrado('hoje')">
+      <span style="color:var(--blue)">▶</span>
+      <span class="estudar-picker-opt-label">Para estudar hoje</span>
+      <span class="estudar-picker-opt-count" style="color:var(--blue)" id="picker-hoje">—</span>
+    </div>
+    <div class="estudar-picker-divider"></div>
+    <div class="estudar-picker-opt" onclick="fecharEstudarPicker();iniciarEstudoPorEstado('learning')">
+      <span style="color:var(--orange)">▶</span>
+      <span class="estudar-picker-opt-label">Em aprendizado</span>
+      <span class="estudar-picker-opt-count" style="color:var(--orange)" id="picker-learning">—</span>
+    </div>
+    <div class="estudar-picker-opt" onclick="fecharEstudarPicker();iniciarEstudoPorEstado('review')">
+      <span style="color:var(--green)">▶</span>
+      <span class="estudar-picker-opt-label">Em revisão</span>
+      <span class="estudar-picker-opt-count" style="color:var(--green)" id="picker-review">—</span>
+    </div>`;
+  _posicionarPicker(evt);
   document.getElementById('picker-hoje').textContent     = document.getElementById('dash-hoje').textContent;
   document.getElementById('picker-learning').textContent = document.getElementById('dash-learning').textContent;
   document.getElementById('picker-review').textContent   = document.getElementById('dash-review').textContent;
+}
+function abrirContextoPicker(evt, tipo, id, n, l, r) {
+  evt.stopPropagation();
+  const picker = document.getElementById('estudar-picker');
+  if (picker.style.display !== 'none' && picker.dataset.ctx === tipo + id) { fecharEstudarPicker(); return; }
+  picker.dataset.mode = 'ctx';
+  picker.dataset.ctx  = tipo + id;
+  const opt = (estado, label, cor, cnt) =>
+    `<div class="estudar-picker-opt" style="${cnt ? '' : 'opacity:.4;pointer-events:none'}"
+       onclick="fecharEstudarPicker();iniciarEstudoContexto('${tipo}','${id}','${estado}')">
+      <span style="color:${cor}">▶</span>
+      <span class="estudar-picker-opt-label">${label}</span>
+      <span class="estudar-picker-opt-count" style="color:${cor}">${cnt}</span>
+    </div>`;
+  picker.innerHTML =
+    `<div class="estudar-picker-opt" onclick="fecharEstudarPicker();iniciarEstudoContexto('${tipo}','${id}',null)">
+      <span>▶</span>
+      <span class="estudar-picker-opt-label">Todos os cards</span>
+      <span class="estudar-picker-opt-count">${n+l+r}</span>
+    </div>
+    <div class="estudar-picker-divider"></div>` +
+    opt('new',      'Novos',      'var(--blue)',   n) +
+    opt('learning', 'Aprendendo', 'var(--orange)', l) +
+    opt('review',   'Revisão',    'var(--green)',  r);
+  _posicionarPicker(evt);
 }
 function fecharEstudarPicker() {
   document.getElementById('estudar-picker').style.display = 'none';
@@ -2262,24 +2313,7 @@ function toast(msg, dur=2500) {
 }
 </script>
 
-<!-- ESTUDAR PICKER -->
-<div id="estudar-picker" class="estudar-picker" style="display:none;">
-  <div class="estudar-picker-opt" onclick="fecharEstudarPicker();iniciarEstudoFiltrado('hoje')">
-    <span style="color:var(--blue)">▶</span>
-    <span class="estudar-picker-opt-label">Para estudar hoje</span>
-    <span class="estudar-picker-opt-count" style="color:var(--blue)" id="picker-hoje">—</span>
-  </div>
-  <div class="estudar-picker-divider"></div>
-  <div class="estudar-picker-opt" onclick="fecharEstudarPicker();iniciarEstudoPorEstado('learning')">
-    <span style="color:var(--orange)">▶</span>
-    <span class="estudar-picker-opt-label">Em aprendizado</span>
-    <span class="estudar-picker-opt-count" style="color:var(--orange)" id="picker-learning">—</span>
-  </div>
-  <div class="estudar-picker-opt" onclick="fecharEstudarPicker();iniciarEstudoPorEstado('review')">
-    <span style="color:var(--green)">▶</span>
-    <span class="estudar-picker-opt-label">Em revisão</span>
-    <span class="estudar-picker-opt-count" style="color:var(--green)" id="picker-review">—</span>
-  </div>
-</div>
+<!-- ESTUDAR PICKER (content set dynamically by abrirEstudarPicker / abrirContextoPicker) -->
+<div id="estudar-picker" class="estudar-picker" style="display:none;"></div>
 </body>
 </html>
