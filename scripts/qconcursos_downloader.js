@@ -1,279 +1,239 @@
 /**
  * qconcursos_downloader.js
  *
- * Execute este script no console do navegador enquanto estiver logado em uma
- * página de questões do qconcursos.com.
+ * Execute este script no console do navegador (F12) enquanto estiver logado
+ * em uma página de questões do qconcursos.com.
  *
- * O script localiza exatamente as 20 questões que possuem "Gabarito Comentado ("
- * (com parêntese aberto + número), ignorando os 2 elementos extras que aparecem
- * quando se busca apenas por "Gabarito Comentado" sem parêntese — evitando a
- * inconsistência de retornar 22 hits e acabar com 18 questões incorretas.
+ * Gera um arquivo JSON compatível com o importador do LPStudy.
  *
- * Para cada questão extrai:
- *   - id, numero, disciplina, assunto, ano, banca, orgao, prova
- *   - enunciado, alternativas (A-E)
- *   - gabarito (letra) e gabaritoComentado (texto completo)
+ * ── Problema resolvido ────────────────────────────────────────────────────
+ * 1. Detecção dos tabs:
+ *    O TreeWalker(SHOW_TEXT) falha quando o contador "(1)" está num <span>
+ *    filho separado: <a>Gabarito Comentado <span>(1)</span></a>.
+ *    Nenhum text node individual contém "Gabarito Comentado (" — portanto
+ *    0 resultados e a função retorna Promise {<fulfilled: undefined>}.
+ *    Correção: usar element.textContent (combina todos os filhos) e manter
+ *    apenas o elemento mais específico (sem filho que também bata).
  *
- * Ao finalizar, faz download automático de um arquivo JSON.
+ * 2. Filtro "Gabarito Comentado (":
+ *    "Gabarito Comentado"  → 22 hits (2 elementos extras sem número)
+ *    "Gabarito Comentado (" → 20 hits (somente questões com gabarito real)
+ *
+ * 3. Formato de saída:
+ *    Compatível com o qconcursos_importer.py do LPStudy:
+ *    { "questions": [ { "enunciado", "alternativas", "gabarito",
+ *                       "comentario", "source", "externalId" } ] }
  *
  * USO:
  *   1. Abra a página de questões no qconcursos (já logado).
  *   2. Abra o DevTools (F12) → aba Console.
  *   3. Cole todo este conteúdo e pressione Enter.
- *   4. Aguarde o log "[QC] ✅ Download concluído!" e o arquivo será salvo.
+ *   4. Aguarde "[QC] ✅ Download concluído!" e salve o arquivo.
+ *   5. Importe-o na página "Importar" do LPStudy.
  */
 (async function qconcursosDownloader() {
   'use strict';
 
   // ── Configurações ──────────────────────────────────────────────────────────
   const CLICK_WAIT = 2500;  // ms para aguardar o conteúdo do tab carregar via AJAX
-  const STEP_WAIT  = 400;   // ms entre questões (evita sobrecarga)
+  const STEP_WAIT  = 500;   // ms entre questões
 
   // ── Utilitários ───────────────────────────────────────────────────────────
-  const sleep     = ms => new Promise(r => setTimeout(r, ms));
-  const log       = msg => console.log(`[QC] ${msg}`);
-  const warn      = msg => console.warn(`[QC] ⚠ ${msg}`);
-  const cleanText = str => (str || '').replace(/\s+/g, ' ').trim();
-
-  /** querySelector com múltiplos seletores como fallback */
-  function findFirst(root, ...selectors) {
-    for (const sel of selectors) {
-      try {
-        const el = root.querySelector(sel);
-        if (el) return el;
-      } catch (_) { /* seletor inválido, ignora */ }
-    }
-    return null;
-  }
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const log   = (...a) => console.log('%c[QC]', 'color:teal;font-weight:bold', ...a);
+  const warn  = (...a) => console.warn('[QC]', ...a);
+  const clean = s => (s || '').replace(/\s+/g, ' ').trim();
 
   // ── PASSO 1: Localizar exatamente os 20 tabs "Gabarito Comentado (" ────────
   //
-  // A chave da solução: filtrar por "Gabarito Comentado (" (com parêntese aberto)
-  // em vez de "Gabarito Comentado" sozinho.
-  // - "Gabarito Comentado"  → 22 hits (inclui 2 elementos sem contagem)
-  // - "Gabarito Comentado (" → 20 hits (apenas as questões com gabarito disponível)
-  //
-  // Usamos TreeWalker para percorrer apenas nós de texto — mais eficiente e
-  // menos suscetível a falsos positivos do que querySelectorAll('*').
+  // Usa element.textContent (combina todos os nós filhos) em vez de
+  // TreeWalker(SHOW_TEXT). Mantém apenas o elemento mais específico:
+  // sem filho direto que também contenha o mesmo texto.
 
-  const gabaritoTabs = [];
-  const seen = new Set();
-
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode: node =>
-        node.textContent.includes('Gabarito Comentado (')
-          ? NodeFilter.FILTER_ACCEPT
-          : NodeFilter.FILTER_REJECT
-    }
-  );
-
-  while (walker.nextNode()) {
-    // Sobe na árvore até encontrar o elemento clicável (a, button, li)
-    let el = walker.currentNode.parentElement;
-    while (el && el !== document.body) {
-      if (['A', 'BUTTON', 'LI'].includes(el.tagName)) break;
-      el = el.parentElement;
-    }
-    if (el && el !== document.body && !seen.has(el)) {
-      seen.add(el);
-      gabaritoTabs.push(el);
-    }
-  }
-
-  // Fallback via XPath caso o TreeWalker não encontre nada
-  if (gabaritoTabs.length === 0) {
-    const xp = document.evaluate(
-      "//*[contains(text(),'Gabarito Comentado (')]",
-      document.body, null,
-      XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null
+  const gabaritoTabs = Array.from(
+    document.querySelectorAll('a, button, li, span')
+  ).filter(el => {
+    const txt = clean(el.textContent);
+    if (!txt.includes('Gabarito Comentado (')) return false;
+    return !Array.from(el.children).some(
+      c => clean(c.textContent).includes('Gabarito Comentado (')
     );
-    for (let i = 0; i < xp.snapshotLength; i++) {
-      const el = xp.snapshotItem(i);
-      if (!seen.has(el)) { seen.add(el); gabaritoTabs.push(el); }
-    }
-  }
+  });
 
-  log(`${gabaritoTabs.length} questões com "Gabarito Comentado (" encontradas.`);
+  log(`${gabaritoTabs.length} tabs "Gabarito Comentado (" encontrados`);
 
-  if (gabaritoTabs.length === 0) {
-    console.error('[QC] Nenhuma questão encontrada. Verifique se está na página correta.');
+  if (!gabaritoTabs.length) {
+    warn('Nenhum tab encontrado! Verifique se está na página de questões.');
     return;
   }
 
   // ── PASSO 2: Processar cada questão ───────────────────────────────────────
 
+  const LETTERS = ['A', 'B', 'C', 'D', 'E'];
   const questions = [];
 
   for (let i = 0; i < gabaritoTabs.length; i++) {
     const tabEl = gabaritoTabs[i];
     log(`Questão ${i + 1}/${gabaritoTabs.length}…`);
 
-    // ── 2a. Encontrar o card/container da questão ─────────────────────────
-    // Sobe na DOM até encontrar um nó que contenha um ID de questão (Qxxxxx)
+    // Subir na DOM até encontrar o card da questão (contém "Qxxxxx")
     let card = tabEl;
-    for (let depth = 0; depth < 25; depth++) {
+    for (let d = 0; d < 25; d++) {
       card = card.parentElement;
       if (!card || card === document.body) { card = null; break; }
       if (/\bQ\d{5,7}\b/.test(card.textContent)) break;
     }
 
+    // Formato compatível com qconcursos_importer.py do LPStudy
     const q = {
-      numero:            i + 1,
-      id:                '',
-      disciplina:        '',
-      assunto:           '',
-      ano:               '',
-      banca:             '',
-      orgao:             '',
-      prova:             '',
-      enunciado:         '',
-      alternativas:      {},
-      gabarito:          '',
-      gabaritoComentado: ''
+      enunciado:    '',
+      alternativas: {},
+      gabarito:     '',
+      comentario:   '',   // ← campo esperado pelo LPStudy (não "gabaritoComentado")
+      source:       window.location.href,
+      externalId:   ''    // ← ID da questão (Qxxxxx)
     };
 
     if (!card) {
-      warn(`Card não encontrado para questão ${i + 1}. Pulando…`);
+      warn(`Card não encontrado para questão ${i + 1}`);
       questions.push(q);
       continue;
     }
 
-    // ── 2b. ID da questão ────────────────────────────────────────────────
-    const idMatch = card.textContent.match(/\b(Q\d{5,7})\b/);
-    if (idMatch) q.id = idMatch[1];
+    // ── externalId ─────────────────────────────────────────────────────────
+    const idM = card.textContent.match(/\b(Q\d{5,7})\b/);
+    if (idM) q.externalId = idM[1];
 
-    // ── 2c. Metadados: ano, banca, órgão, prova ──────────────────────────
-    const cardText = card.innerText || card.textContent;
+    // ── Metadados para enriquecer o enunciado ──────────────────────────────
+    const ct = card.innerText || card.textContent;
+    const ano   = (ct.match(/Ano[:\s]+(\d{4})/i)?.[1] || '').trim();
+    const banca = (ct.match(/Banca[:\s]+([^\n\r]+?)(?=\s{2,}|[Óo]rg|Prova|\n|$)/i)?.[1] || '').trim();
+    const orgao = (ct.match(/[Óo]rg[ãa]o[:\s]+([^\n\r]+?)(?=\s{2,}|Prova|Banca|\n|$)/i)?.[1] || '').trim();
+    const prova = (ct.match(/Prova[:\s]+([^\n\r]+?)(?=\s{2,}|Banca|[Óo]rg|\n|$)/i)?.[1] || '').trim();
 
-    const anoM   = cardText.match(/Ano[:\s]+(\d{4})/i);
-    const bancaM = cardText.match(/Banca[:\s]+([^\n\r\t]+?)(?=\s{2,}|\n|[Óo]rg|Prova|$)/i);
-    const orgaoM = cardText.match(/[Óo]rg[ãa]o[:\s]+([^\n\r\t]+?)(?=\s{2,}|\n|Prova|Banca|$)/i);
-    const provaM = cardText.match(/Prova[:\s]+([^\n\r\t]+?)(?=\s{2,}|\n|Banca|[Óo]rg|$)/i);
-
-    if (anoM)   q.ano   = anoM[1].trim();
-    if (bancaM) q.banca = bancaM[1].trim();
-    if (orgaoM) q.orgao = orgaoM[1].trim();
-    if (provaM) q.prova = provaM[1].trim();
-
-    // ── 2d. Disciplina / Assunto via breadcrumb ──────────────────────────
-    const breadcrumb = findFirst(
-      card,
-      '[class*="breadcrumb"]', '[class*="topic"]', '[class*="subject"]',
-      '[class*="category"]',  '[class*="area"]',   '[class*="trail"]'
-    );
-    if (breadcrumb) {
-      const parts = (breadcrumb.innerText || breadcrumb.textContent).split(/[›»>\/]/);
-      if (parts[0]) q.disciplina = cleanText(parts[0]);
-      if (parts[1]) q.assunto    = cleanText(parts[1]);
-    }
-
-    // ── 2e. Enunciado ────────────────────────────────────────────────────
-    const enunciadoEl = findFirst(
-      card,
+    // ── Enunciado ──────────────────────────────────────────────────────────
+    for (const sel of [
       '[class*="statement"]', '[class*="enunciado"]', '[class*="question-text"]',
-      '[class*="question-body"]', '[class*="body"] p', '[class*="texto"]'
-    );
-    if (enunciadoEl) {
-      q.enunciado = cleanText(enunciadoEl.innerText || enunciadoEl.textContent);
+      '[class*="question-body"]', '[class*="texto"]'
+    ]) {
+      const el = card.querySelector(sel);
+      if (el) { q.enunciado = clean(el.innerText || el.textContent); break; }
+    }
+    // Fallback: texto do card antes das alternativas
+    if (!q.enunciado) {
+      const headerInfo = [ano, banca, orgao, prova].filter(Boolean).join(' — ');
+      q.enunciado = headerInfo ? `[${headerInfo}]` : '';
+    }
+    // Inclui identificação da questão no enunciado
+    if (q.externalId) {
+      q.enunciado = q.enunciado
+        ? `${q.enunciado}`
+        : `${q.externalId}`;
     }
 
-    // ── 2f. Alternativas ─────────────────────────────────────────────────
-    const LETTERS = ['A', 'B', 'C', 'D', 'E'];
-
-    // Tenta seletores semânticos primeiro
-    const altEls = card.querySelectorAll(
-      '[class*="alternative"], [class*="alternativa"], [class*="option"]'
-    );
-
-    if (altEls.length >= 2) {
-      altEls.forEach((el, idx) => {
+    // ── Alternativas ───────────────────────────────────────────────────────
+    for (const sel of ['[class*="alternative"]','[class*="alternativa"]','[class*="option"]']) {
+      const els = card.querySelectorAll(sel);
+      if (els.length >= 2) {
+        els.forEach((el, idx) => {
+          if (idx < 5) {
+            q.alternativas[LETTERS[idx]] = clean(el.innerText || el.textContent)
+              .replace(/^[A-E]\s+/, '');
+          }
+        });
+        break;
+      }
+    }
+    // Fallback: radio buttons
+    if (!Object.keys(q.alternativas).length) {
+      card.querySelectorAll('input[type="radio"]').forEach((r, idx) => {
         if (idx >= 5) return;
-        // Remove letra inicial duplicada (ex.: "A ao Poder…" → "ao Poder…")
-        const txt = cleanText(el.innerText || el.textContent)
-          .replace(/^[A-E]\s+/, '');
-        q.alternativas[LETTERS[idx]] = txt;
-      });
-    } else {
-      // Fallback: radio buttons
-      const radios = card.querySelectorAll('input[type="radio"]');
-      radios.forEach((radio, idx) => {
-        if (idx >= 5) return;
-        const label = radio.closest('label') || radio.nextElementSibling;
-        if (label) {
-          q.alternativas[LETTERS[idx]] = cleanText(
-            label.innerText || label.textContent
-          ).replace(/^[A-E]\s+/, '');
-        }
+        const lbl = r.closest('label') || r.nextElementSibling;
+        if (lbl) q.alternativas[LETTERS[idx]] =
+          clean(lbl.innerText || lbl.textContent).replace(/^[A-E]\s+/, '');
       });
     }
+    // Garante todas as 5 chaves
+    LETTERS.forEach(l => { if (!q.alternativas[l]) q.alternativas[l] = ''; });
 
-    // ── 2g. Clicar no tab e aguardar carregamento ────────────────────────
+    // ── Clicar no tab e aguardar AJAX ──────────────────────────────────────
     tabEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     await sleep(300);
     tabEl.click();
-    // Dispara evento manual para garantir compatibilidade com frameworks JS
     tabEl.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     await sleep(CLICK_WAIT);
 
-    // ── 2h. Extrair conteúdo do Gabarito Comentado ───────────────────────
-    const gabEl = findFirst(
-      card,
+    // ── Extrair Gabarito Comentado → campo "comentario" ────────────────────
+    const gabSelectors = [
       '[class*="gabarito"][class*="content"]',
       '[class*="gabarito"][class*="body"]',
       '[class*="gabarito"][class*="text"]',
-      '[class*="commented"]',
-      '[class*="comentado"]',
-      '.tab-pane.active',
-      '[role="tabpanel"]:not([hidden])',
+      '[class*="commented"]', '[class*="comentado"]',
+      '.tab-pane.active', '[role="tabpanel"]:not([hidden])',
       '[class*="tab-content"] [class*="active"]',
-      '[class*="collapse"].show',
-      '[class*="panel"].active'
-    );
+      '[class*="collapse"].show', '[class*="panel"].active'
+    ];
 
-    if (gabEl) {
-      q.gabaritoComentado = cleanText(gabEl.innerText || gabEl.textContent);
-    } else {
-      // Fallback: procura no texto completo do card por padrão "Gabarito: X"
-      const section = cardText.match(/Gabarito\s*:?\s*[A-E]\b[\s\S]{0,3000}/);
-      if (section) q.gabaritoComentado = cleanText(section[0]);
+    for (const root of [card, document]) {
+      if (q.comentario) break;
+      for (const sel of gabSelectors) {
+        try {
+          const el = root.querySelector(sel);
+          if (el && clean(el.textContent).length > 20) {
+            q.comentario = clean(el.innerText || el.textContent);
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+    // Fallback: trecho de texto com padrão "Gabarito: X"
+    if (!q.comentario) {
+      const m = ct.match(/Gabarito\s*:?\s*[A-E]\b[\s\S]{0,2000}/);
+      if (m) q.comentario = clean(m[0]);
     }
 
-    // Extrai a letra do gabarito
-    const letterM = q.gabaritoComentado.match(/[Gg]abarito\s*:?\s*([A-E])\b/);
-    if (letterM) q.gabarito = letterM[1];
+    // Extrai letra do gabarito do campo comentario
+    const lm = q.comentario.match(/[Gg]abarito\s*:?\s*([A-E])\b/);
+    if (lm) q.gabarito = lm[1];
 
     questions.push(q);
-    log(`  ✓ ${q.id || `#${i + 1}`} | Gabarito: ${q.gabarito || '?'}`);
+    log(`  ✓ ${q.externalId || '#' + (i + 1)} | Gabarito: ${q.gabarito || '?'}`);
     await sleep(STEP_WAIT);
   }
 
-  // ── PASSO 3: Gerar e baixar o JSON ────────────────────────────────────────
+  // ── PASSO 3: Gerar JSON no formato LPStudy e baixar ───────────────────────
+  //
+  // Formato esperado pelo qconcursos_importer.py / página de importação:
+  // { "questions": [ { enunciado, alternativas, gabarito, comentario, source, externalId } ] }
 
-  const output = {
-    exportedAt:   new Date().toISOString(),
-    url:          window.location.href,
-    totalQuestoes: questions.length,
-    questoes:     questions
-  };
+  const output = { questions };
+  const json   = JSON.stringify(output, null, 2);
 
-  const json = JSON.stringify(output, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = Object.assign(document.createElement('a'), {
-    href:     url,
-    download: `qconcursos_questoes_${Date.now()}.json`
-  });
+  // Método 1: link de download
+  try {
+    const blob = new Blob([json], { type: 'application/json' });
+    const burl = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = burl;
+    a.download = `questoes.json`;   // nome padrão esperado pelo LPStudy
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(burl); }, 1500);
+    log('✅ Download concluído! Importe o arquivo questoes.json no LPStudy.');
+  } catch (e) {
+    // Método 2: clipboard
+    warn('Download bloqueado, copiando para clipboard…');
+    try {
+      await navigator.clipboard.writeText(json);
+      log('✅ JSON copiado! Cole num editor e salve como questoes.json');
+    } catch (e2) {
+      // Método 3: variável global
+      window._qcData = output;
+      log('✅ Dados em window._qcData — execute: copy(JSON.stringify(window._qcData,null,2))');
+    }
+  }
 
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
-  log(`✅ Download concluído! ${questions.length} questões exportadas.`);
-
-  // Retorna para inspeção no console se necessário
+  log(`Total: ${questions.length} questões exportadas.`);
   return output;
 })();
